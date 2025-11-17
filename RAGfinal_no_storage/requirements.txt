@@ -1,0 +1,14 @@
+requests
+PyMuPDF
+nltk
+sentence-transformers
+chromadb
+ollama
+scikit-learn
+numpy
+pdfplumber
+Django
+spacy
+mysqlclient
+mysql-connector-python
+google-genai>=1.0.0

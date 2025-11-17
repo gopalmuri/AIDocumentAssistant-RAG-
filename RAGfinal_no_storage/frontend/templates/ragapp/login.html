@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  {% load static %}
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Login - AI Document Assistant</title>
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+  <link rel="stylesheet" href="{% static 'ragapp/login.css' %}">
+</head>
+<body>
+  <div class="login-container">
+    <div class="login-card">
+      <!-- User Icon -->
+      <div class="user-icon">
+        <i class="fas fa-user"></i>
+      </div>
+      
+      <!-- Header -->
+      <div class="header">
+        <h1>Welcome Back</h1>
+        <p>Please sign in to your account</p>
+      </div>
+      
+      <!-- Messages -->
+      {% if messages %}
+        {% for message in messages %}
+          <div class="{% if message.tags == 'error' %}error-message{% else %}success-message{% endif %}">
+            {{ message }}
+          </div>
+        {% endfor %}
+      {% endif %}
+      
+      <!-- Login Form -->
+      <form class="login-form" method="post" autocomplete="off">
+        {% csrf_token %}
+        <div class="form-group">
+          <label for="username">Username</label>
+          <input type="text" id="username" name="username" placeholder="Enter your username" autocomplete="off" required>
+        </div>
+        
+        <div class="form-group">
+          <label for="password">Password</label>
+          <input type="password" id="password" name="password" placeholder="Enter your password" autocomplete="new-password" required>
+        </div>
+        
+        <button type="submit" class="signin-btn">
+          <i class="fas fa-sign-in-alt"></i>
+          Sign In
+        </button>
+      </form>
+      
+      <!-- Footer Links -->
+      <div class="footer-links">
+        <a href="{% url 'reset_password' %}" class="forgot-password">Forgot password?</a>
+        <p class="signup-text">
+          Don't have an account? 
+          <a href="{% url 'signup' %}" class="signup-link">Sign up</a>
+        </p>
+      </div>
+    </div>
+  </div>
+</body>
+</html>

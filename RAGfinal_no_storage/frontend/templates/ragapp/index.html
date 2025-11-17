@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  {% load static %}
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AI Document Assistant(RAG)</title>
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+  <link rel="stylesheet" href="{% static 'ragapp/style.css' %}?v=12">
+</head>
+<body>
+  <div class="app-container">
+    <header class="header">
+      <div class="header-controls">
+        <button class="control-btn" id="themeToggle" title="Toggle Dark Mode">
+          <i class="fas fa-moon"></i>
+        </button>
+        <div style="position: relative;">
+          <button class="control-btn" id="exportBtn" title="Export Chat">
+            <i class="fas fa-download"></i>
+          </button>
+          <div class="export-options" id="exportOptions">
+            <button class="export-option" onclick="app.exportChat('txt')">
+              <i class="fas fa-file-alt"></i> Export as Text
+            </button>
+            <button class="export-option" onclick="app.exportChat('json')">
+              <i class="fas fa-file-code"></i> Export as JSON
+            </button>
+          </div>
+        </div>
+        <button class="control-btn" id="clearChatBtn" title="Clear Chat History">
+          <i class="fas fa-trash"></i>
+        </button>
+        <a href="{% url 'logout' %}" class="control-btn" title="Logout">
+          <i class="fas fa-sign-out-alt"></i>
+        </a>
+        <button class="control-btn" id="historyBtn" title="History">
+          <i class="fas fa-clock-rotate-left"></i>
+        </button>
+        <button class="control-btn" id="newChatBtn" title="New Chat">
+          <i class="fas fa-plus"></i>
+        </button>
+      </div>
+      <h1><i class="fas fa-robot"></i> AI Document Assistant(RAG)</h1>
+      <p>Welcome, {{ user.first_name|default:user.username }}! ask questions to get intelligent answers</p>
+    </header>
+
+    <div class="main-content">
+      <!-- Left Panel: PDF Library -->
+      <div class="pdf-library-panel">
+        <div class="library-header">
+          <h2 class="section-title">
+            <i class="lucide lucide-folder-open"></i>
+            Document Library
+          </h2>
+        </div>
+        
+        <!-- Search Bar -->
+        <div class="search-container">
+          <div class="search-input-wrapper">
+            <i class="lucide lucide-search search-icon"></i>
+            <input type="text" id="pdfSearchInput" placeholder="Search documents..." class="search-input" />
+            <button id="clearSearchBtn" class="clear-search-btn" style="display: none;">
+              <i class="lucide lucide-x"></i>
+            </button>
+          </div>
+        </div>
+
+        <!-- PDF List Container -->
+        <div class="pdf-list-container">
+          <div class="pdf-list" id="pdfGrid">
+            <div class="pdf-loading">
+              <div class="spinner"></div>
+              <span>Loading documents...</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- PDF Stats -->
+        <div class="pdf-stats" id="pdfStats" style="display: none;">
+          <span id="pdfCount">0 documents found</span>
+        </div>
+      </div>
+
+      <!-- Right Panel: Q&A Area -->
+      <div class="chat-section" style="border-radius: 20px !important; border-top-right-radius: 20px !important; border-bottom-right-radius: 20px !important; border-top-left-radius: 20px !important; border-bottom-left-radius: 20px !important;">
+        <div class="chat-header">
+          <h2 class="section-title">
+            <i class="lucide lucide-message-circle"></i>
+            Ask Questions
+          </h2>
+        </div>
+
+        <div class="chat-container">
+          <div class="chat-messages" id="chatMessages">
+            <div class="empty-state">
+              <i class="lucide lucide-message-circle-plus"></i>
+              <div>Start a conversation by asking a question about your documents</div>
+              <div class="suggested-questions">
+                <h4>Try asking:</h4>
+                <div class="suggestion-chip" onclick="app.useSuggestion('What is the main topic of this document?')">What is the main topic of this document?</div>
+                <div class="suggestion-chip" onclick="app.useSuggestion('Summarize the key points')">Summarize the key points</div>
+                <div class="suggestion-chip" onclick="app.useSuggestion('What are the important conclusions?')">What are the important conclusions?</div>
+                <div class="suggestion-chip" onclick="app.useSuggestion('Explain the main concepts')">Explain the main concepts</div>
+              </div>
+            </div>
+          </div>
+
+          <div class="chat-input-container">
+            <textarea 
+              class="chat-input" 
+              id="chatInput" 
+              placeholder="Ask a question about your documents..."
+              rows="1"
+            ></textarea>
+            <button class="send-btn" id="sendBtn" disabled title="Send message">
+              <i class="fas fa-paper-plane"></i>
+            </button>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+  <!-- Chat History Sidebar -->
+  <div id="historySidebar" style="position:fixed;top:0;right:-360px;width:360px;height:100%;background:#111827;color:#fff;box-shadow:-4px 0 16px rgba(0,0,0,0.2);transition:right .25s ease;z-index:9998;display:flex;flex-direction:column">
+    <div style="padding:12px 16px;display:flex;align-items:center;gap:8px;border-bottom:1px solid #1f2937">
+      <button id="closeHistoryBtn" class="control-btn" style="background:#374151;color:#fff;border:none;border-radius:8px;padding:6px 10px;cursor:pointer"><i class="fas fa-times"></i></button>
+      <strong>History</strong>
+    </div>
+    <div style="padding:8px 10px;border-bottom:1px solid #1f2937">
+      <input id="historySearch" type="text" placeholder="Search conversations..." style="width:100%;padding:8px 10px;border-radius:8px;border:1px solid #374151;background:#0b1220;color:#e5e7eb;outline:none">
+    </div>
+    <div id="historyList" style="flex:1;overflow:auto;padding:8px 8px 20px 8px"></div>
+  </div>
+
+  <!-- PDF Viewer Overlay -->
+  <div class="pdf-viewer-overlay" id="pdfViewerOverlay" style="display: none;">
+    <div class="pdf-viewer-container">
+      <div class="pdf-viewer-header">
+        <button class="back-btn" id="backToLibraryBtn">
+          <i class="fas fa-arrow-left"></i>
+          Back
+        </button>
+        <h3 class="pdf-viewer-title" id="pdfViewerTitle">PDF Viewer</h3>
+        <div class="pdf-viewer-controls">
+          <button class="pdf-viewer-control-btn" title="Search">
+            <i class="fas fa-search"></i>
+          </button>
+          <button class="pdf-viewer-control-btn" title="Zoom In">
+            <i class="fas fa-search-plus"></i>
+          </button>
+          <button class="pdf-viewer-control-btn" title="Zoom Out">
+            <i class="fas fa-search-minus"></i>
+          </button>
+          <button class="pdf-viewer-control-btn" title="Refresh">
+            <i class="fas fa-sync-alt"></i>
+          </button>
+          <span class="pdf-viewer-page-info" id="pdfPageInfo">1/1</span>
+        </div>
+      </div>
+      <div class="pdf-viewer-main">
+        <iframe class="pdf-viewer-frame" id="pdfViewerFrame" src=""></iframe>
+        <div class="pdf-viewer-chat">
+          <div class="pdf-viewer-chat-header">
+            <h3 class="pdf-viewer-chat-title" id="pdfChatTitle">Chat with PDF</h3>
+            <button class="pdf-viewer-chat-close" id="pdfChatClose">
+              <i class="fas fa-times"></i>
+            </button>
+          </div>
+          <div class="pdf-viewer-chat-content">
+            <div class="pdf-viewer-chat-icon">
+              <i class="fas fa-comment-slash"></i>
+            </div>
+            <div class="pdf-viewer-chat-message">Ask questions about this PDF</div>
+            <div class="pdf-viewer-chat-suggestions">
+              <button class="pdf-viewer-chat-suggestion primary" onclick="app.usePDFSuggestion('What is the main topic of this document?')">
+                What is the main topic of this document?
+              </button>
+              <button class="pdf-viewer-chat-suggestion" onclick="app.usePDFSuggestion('Summarize the key points')">
+                Summarize the key points
+              </button>
+              <button class="pdf-viewer-chat-suggestion" onclick="app.usePDFSuggestion('What are the important conclusions?')">
+                What are the important conclusions?
+              </button>
+            </div>
+          </div>
+          <div class="pdf-viewer-chat-input">
+            <textarea class="pdf-viewer-chat-textarea" id="pdfChatInput" placeholder="Ask a question about this PDF..." rows="1"></textarea>
+            <button class="pdf-viewer-chat-send" id="pdfChatSend">
+              <i class="fas fa-paper-plane"></i>
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="copy-success" id="copySuccess">
+    <i class="fas fa-check"></i> Copied to clipboard!
+  </div>
+
+  <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
+  <script>
+    // Initialize Lucide icons
+    document.addEventListener('DOMContentLoaded', function() {
+      if (typeof lucide !== 'undefined') {
+        lucide.createIcons();
+      }
+    });
+  </script>
+  <script src="{% static 'ragapp/main.js' %}?v=25"></script>
+</body>
+</html>

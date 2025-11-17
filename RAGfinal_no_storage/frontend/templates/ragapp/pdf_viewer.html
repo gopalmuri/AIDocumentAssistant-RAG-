@@ -1,0 +1,1135 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  {% load static %}
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{{ pdf_display_name }} - PDF Viewer</title>
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+  <link rel="stylesheet" href="{% static 'ragapp/style.css' %}">
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    
+    html, body {
+      width: 100% !important;
+      height: 100% !important;
+      overflow: hidden;
+      margin: 0 !important;
+      padding: 0 !important;
+    }
+    
+    .pdf-viewer-container {
+      display: flex;
+      width: 100vw !important;
+      height: 100vh !important;
+      margin: 0 !important;
+      padding: 0 !important;
+      background: #f8fafc;
+      border-radius: 0 !important;
+      max-width: none !important;
+      max-height: none !important;
+      box-shadow: none !important;
+    }
+    
+    .pdf-viewer-main {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      position: relative;
+      transition: width 0.3s ease;
+      width: 100%;
+      margin: 0;
+      padding: 0;
+    }
+    
+    .pdf-viewer-main.chat-open {
+      width: 50%;
+    }
+    
+    .pdf-viewer-header {
+      background: #1f2937;
+      color: white;
+      padding: 12px 20px;
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+      z-index: 1000;
+    }
+    
+    .pdf-viewer-header .close-btn {
+      background: #374151;
+      color: white;
+      border: none;
+      border-radius: 8px;
+      padding: 8px 12px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    
+    .pdf-viewer-header .close-btn:hover {
+      background: #4b5563;
+    }
+    
+    .pdf-title {
+      flex: 1;
+      font-weight: 600;
+      font-size: 16px;
+    }
+    
+    .pdf-controls {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    
+    .pdf-controls button {
+      background: #374151;
+      color: white;
+      border: none;
+      border-radius: 6px;
+      padding: 6px 10px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      font-size: 12px;
+    }
+    
+    .pdf-controls button:hover {
+      background: #4b5563;
+    }
+    
+    .pdf-controls button:disabled {
+      background: #6b7280;
+      cursor: not-allowed;
+    }
+    
+    .page-info {
+      font-size: 14px;
+      color: #d1d5db;
+    }
+    
+    .pdf-content {
+      flex: 1;
+      display: flex;
+      position: relative;
+      overflow: hidden;
+      width: 100%;
+      margin: 0;
+      padding: 0;
+    }
+    
+     .pdf-container {
+       width: 100%;
+       height: calc(100vh - 140px);
+       min-height: 600px;
+       position: relative;
+       background: linear-gradient(to right, #e5e7eb 0%, #e5e7eb 15%, transparent 15%, transparent 85%, #e5e7eb 85%, #e5e7eb 100%);
+       display: block;
+       overflow: auto;
+       padding: 0;
+       padding-bottom: 80px; /* Space for fixed controls */
+       text-align: center;
+     }
+    
+     .pdf-canvas {
+       max-width: none;
+       width: auto;
+       height: auto;
+       min-width: none;
+       min-height: none;
+       box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+       border-radius: 8px;
+       background: white;
+       display: inline-block;
+       margin: 0 auto;
+       border: 1px solid #d1d5db;
+       image-rendering: -webkit-optimize-contrast;
+       image-rendering: crisp-edges;
+       image-rendering: pixelated;
+       /* Ensure full content is visible */
+       box-sizing: border-box;
+       overflow: visible;
+     }
+    
+    .pdf-controls-overlay {
+      position: fixed;
+      bottom: 20px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: rgba(0,0,0,0.9);
+      color: white;
+      padding: 12px 20px;
+      border-radius: 25px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      backdrop-filter: blur(10px);
+      z-index: 1000;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+      transition: all 0.3s ease;
+    }
+    
+    .pdf-controls-overlay.chat-open {
+      left: 110px !important;
+      transform: none !important;
+      max-width: calc(50% - 120px);
+    }
+    
+    .pdf-control-btn {
+      background: rgba(255,255,255,0.2);
+      border: none;
+      color: white;
+      padding: 8px 12px;
+      border-radius: 6px;
+      cursor: pointer;
+      transition: background 0.2s ease;
+    }
+    
+    .pdf-control-btn:hover {
+      background: rgba(255,255,255,0.3);
+    }
+    
+    .pdf-control-btn:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+    
+    .page-info, .zoom-info {
+      font-size: 14px;
+      font-weight: 500;
+      min-width: 60px;
+      text-align: center;
+    }
+    
+    .page-input-container {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+    
+    .page-input {
+      width: 50px;
+      padding: 4px 6px;
+      border: 1px solid rgba(255,255,255,0.3);
+      border-radius: 4px;
+      background: rgba(255,255,255,0.1);
+      color: white;
+      text-align: center;
+      font-size: 12px;
+    }
+    
+    .page-input:focus {
+      outline: none;
+      border-color: rgba(255,255,255,0.6);
+      background: rgba(255,255,255,0.2);
+    }
+    
+    .page-input::placeholder {
+      color: rgba(255,255,255,0.7);
+    }
+    
+    /* Hide browser icons and elements */
+    .pdf-iframe::-webkit-scrollbar {
+      display: none;
+    }
+    
+    .pdf-iframe {
+      -ms-overflow-style: none;
+      scrollbar-width: none;
+    }
+    
+    /* PDF loading fallback */
+    .pdf-loading-fallback {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      text-align: center;
+      color: #6b7280;
+      font-size: 16px;
+    }
+    
+    .chat-toggle {
+      position: absolute;
+      top: 20px;
+      right: 20px;
+      background: #3b82f6;
+      color: white;
+      border: none;
+      border-radius: 50px;
+      padding: 12px 20px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
+      z-index: 100;
+    }
+    
+    .chat-toggle:hover {
+      background: #2563eb;
+      transform: translateY(-1px);
+    }
+    
+    .floating-chat {
+      position: fixed;
+      top: 0;
+      right: 0;
+      width: 50%;
+      height: 100vh;
+      background: white;
+      box-shadow: -4px 0 16px rgba(0,0,0,0.1);
+      display: none;
+      flex-direction: column;
+      z-index: 200;
+      border-left: 1px solid #e5e7eb;
+      overflow: hidden;
+    }
+    
+    .floating-chat.open {
+      display: flex;
+    }
+    
+    .chat-header {
+      background: #1f2937;
+      color: white;
+      padding: 16px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    
+    .chat-header h3 {
+      margin: 0;
+      font-size: 16px;
+    }
+    
+    .chat-close {
+      background: none;
+      border: none;
+      color: white;
+      cursor: pointer;
+      font-size: 18px;
+    }
+    
+    .chat-messages {
+      flex: 1;
+      overflow-y: auto;
+      padding: 16px;
+      background: #f8fafc;
+      max-height: calc(100vh - 160px);
+      min-height: 200px;
+    }
+    
+    .chat-input-container {
+      padding: 20px;
+      background: white;
+      border-top: 1px solid #e5e7eb;
+      display: flex;
+      gap: 12px;
+      align-items: center;
+      margin-bottom: 0;
+      position: sticky;
+      bottom: 0;
+      z-index: 1001;
+      box-shadow: 0 -4px 12px rgba(0,0,0,0.15);
+      min-height: 80px;
+      margin-right: 20px;
+    }
+    
+    .chat-input {
+      flex: 1;
+      padding: 16px 20px;
+      border: 2px solid #3b82f6;
+      border-radius: 12px;
+      resize: none;
+      font-family: inherit;
+      min-height: 50px;
+      max-height: 120px;
+      font-size: 16px;
+      line-height: 1.5;
+      background: white;
+      position: relative;
+      z-index: 1001;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    }
+    
+    .chat-input:focus {
+      outline: none;
+      border-color: #1d4ed8;
+      box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+    }
+    
+    .chat-send {
+      background: linear-gradient(135deg, #3b82f6, #1e40af);
+      color: white;
+      border: none;
+      border-radius: 50%;
+      padding: 14px;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      width: 50px;
+      height: 50px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06);
+      flex-shrink: 0;
+    }
+    
+    .chat-send:hover:not(:disabled) {
+      background: linear-gradient(135deg, #1e40af, #3b82f6);
+      transform: translateY(-2px) scale(1.05);
+      box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+    }
+    
+    .chat-send:disabled {
+      background: #e2e8f0 !important;
+      color: #94a3b8 !important;
+      cursor: default !important;
+      opacity: 0.7 !important;
+      transform: none !important;
+    }
+    
+    .chat-send i {
+      font-size: 18px;
+    }
+     
+     /* Citations and Follow-up Questions Styles */
+     .citations {
+       margin-top: 12px;
+       padding: 8px 12px;
+       background: #f1f5f9;
+       border-radius: 6px;
+       border-left: 3px solid #3b82f6;
+     }
+     
+     .citations ul {
+       margin: 4px 0 0 0;
+       padding-left: 16px;
+     }
+     
+     .citations li {
+       margin: 4px 0;
+       font-size: 13px;
+     }
+     
+     .citation-link {
+       color: #1f2937;
+       text-decoration: none;
+       font-weight: 600;
+       cursor: default;
+     }
+     
+     .citation-link:hover {
+       text-decoration: none;
+       color: #1f2937;
+     }
+     
+     .follow-up-questions {
+       margin-top: 12px;
+       padding: 8px 12px;
+       background: #f0f9ff;
+       border-radius: 6px;
+       border-left: 3px solid #0ea5e9;
+     }
+     
+     .follow-up-list {
+       margin-top: 8px;
+     }
+     
+     .follow-up-item {
+       margin: 6px 0;
+       padding: 6px 10px;
+       background: white;
+       border: 1px solid #e0e7ff;
+       border-radius: 4px;
+       cursor: pointer;
+       font-size: 13px;
+       transition: all 0.2s ease;
+     }
+     
+     .follow-up-item:hover {
+       background: #f8fafc;
+       border-color: #3b82f6;
+       transform: translateX(2px);
+     }
+     
+     .message-content {
+       position: relative;
+     }
+     
+     .message-time {
+       font-size: 11px;
+       color: #9ca3af;
+       margin-top: 8px;
+       text-align: right;
+     }
+     
+     /* AI Thinking Indicator */
+     .message.thinking {
+       opacity: 0.8;
+     }
+     
+     .thinking-dots {
+       display: flex;
+       gap: 4px;
+       align-items: center;
+     }
+     
+     .thinking-dots span {
+       width: 8px;
+       height: 8px;
+       background: #3b82f6;
+       border-radius: 50%;
+       animation: thinking-pulse 1.4s infinite ease-in-out;
+     }
+     
+     .thinking-dots span:nth-child(1) {
+       animation-delay: -0.32s;
+     }
+     
+     .thinking-dots span:nth-child(2) {
+       animation-delay: -0.16s;
+     }
+     
+     @keyframes thinking-pulse {
+       0%, 80%, 100% {
+         transform: scale(0.8);
+         opacity: 0.5;
+       }
+       40% {
+         transform: scale(1.2);
+         opacity: 1;
+       }
+     }
+   </style>
+</head>
+<body>
+  <div class="pdf-viewer-container">
+    <div class="pdf-viewer-main">
+      <div class="pdf-viewer-header">
+        <button class="close-btn" onclick="window.location.href='/'">
+          <i class="fas fa-arrow-left"></i>
+          Back
+        </button>
+        <div class="pdf-title">{{ pdf_display_name }}</div>
+        <div class="pdf-controls">
+          <button id="zoomOutBtn" title="Zoom Out" onclick="zoomOut()">
+            <i class="fas fa-search-minus"></i>
+          </button>
+          <button id="zoomInBtn" title="Zoom In" onclick="zoomIn()">
+            <i class="fas fa-search-plus"></i>
+          </button>
+          <button id="rotateBtn" title="Rotate" onclick="rotate()">
+            <i class="fas fa-redo"></i>
+          </button>
+          <button id="fitToWidthBtn" title="Fit to Width" onclick="fitToWidth()">
+            <i class="fas fa-expand-arrows-alt"></i>
+          </button>
+          <div class="page-info">
+            <span id="currentPage">1</span> / <span id="totalPages">1</span>
+          </div>
+        </div>
+      </div>
+      
+      <div class="pdf-content">
+        <div id="pdfContainer" class="pdf-container">
+          <canvas id="pdfCanvas" class="pdf-canvas"></canvas>
+          <div id="pdfControls" class="pdf-controls-overlay">
+            <button id="prevPage" class="pdf-control-btn" title="Previous Page">
+              <i class="fas fa-chevron-left"></i>
+            </button>
+            <span id="pageInfo" class="page-info">1 / 1</span>
+            <button id="nextPage" class="pdf-control-btn" title="Next Page">
+              <i class="fas fa-chevron-right"></i>
+            </button>
+            <div class="page-input-container">
+              <input type="number" id="pageInput" class="page-input" min="1" max="1" value="1" placeholder="Page">
+              <button id="goToPage" class="pdf-control-btn" title="Go to Page">
+                <i class="fas fa-arrow-right"></i>
+              </button>
+            </div>
+            <button id="zoomOut" class="pdf-control-btn" title="Zoom Out">
+              <i class="fas fa-search-minus"></i>
+            </button>
+            <span id="zoomLevel" class="zoom-info">100%</span>
+            <button id="zoomIn" class="pdf-control-btn" title="Zoom In">
+              <i class="fas fa-search-plus"></i>
+            </button>
+            <button id="fitToWidth" class="pdf-control-btn" title="Fit to Width" onclick="fitToWidth()">
+              <i class="fas fa-expand-arrows-alt"></i>
+            </button>
+          </div>
+        </div>
+        <div id="pdfLoadingFallback" class="pdf-loading-fallback" style="display: none;">
+          <div style="font-size: 48px; margin-bottom: 16px;">📄</div>
+          <div>Loading PDF...</div>
+          <div style="font-size: 14px; margin-top: 8px; color: #9ca3af;">If the PDF doesn't load, try refreshing the page</div>
+        </div>
+        
+        <div id="pdfErrorFallback" class="pdf-loading-fallback" style="display: none;">
+          <div style="font-size: 48px; margin-bottom: 16px;">📄❌</div>
+          <div>PDF cannot be displayed in browser</div>
+          <div style="font-size: 14px; margin-top: 8px; color: #9ca3af;">Click the button below to download and view the PDF</div>
+          <button onclick="downloadPDF()" style="background: #3b82f6; color: white; border: none; padding: 12px 24px; border-radius: 8px; cursor: pointer; margin-top: 16px;">
+            <i class="fas fa-download"></i> Download PDF
+          </button>
+        </div>
+        
+        <button class="chat-toggle" id="chatToggle">
+          <i class="fas fa-comments"></i>
+          Chat with AI
+        </button>
+        
+        <div class="floating-chat" id="floatingChat">
+          <div class="chat-header">
+            <h3>Chat with {{ pdf_display_name }}</h3>
+            <button class="chat-close" id="chatClose">
+              <i class="fas fa-times"></i>
+            </button>
+          </div>
+          
+          <div class="chat-messages" id="chatMessages">
+            <div class="empty-state">
+              <i class="fas fa-comment-slash"></i>
+              <div>Ask questions about this PDF</div>
+              <div class="suggested-questions">
+                <h4>Try asking:</h4>
+                <div class="suggestion-chip" onclick="useSuggestion('What is the main topic of this document?')">What is the main topic of this document?</div>
+                <div class="suggestion-chip" onclick="useSuggestion('Summarize the key points')">Summarize the key points</div>
+                <div class="suggestion-chip" onclick="useSuggestion('What are the important conclusions?')">What are the important conclusions?</div>
+              </div>
+            </div>
+          </div>
+          
+          <div class="chat-input-container">
+            <textarea 
+              id="chatInput" 
+              class="chat-input" 
+              placeholder="Ask a question about this PDF..."
+              rows="1"
+            ></textarea>
+            <button id="chatSend" class="chat-send" disabled>
+              <i class="fas fa-paper-plane"></i>
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+  <script src="{% static 'ragapp/main.js' %}?v=19"></script>
+  <script>
+    // PDF Viewer specific functionality
+    let pdfDoc = null;
+    let currentPage = 1;
+    let totalPages = 1;
+    let currentZoom = 1.0; // Standard 100% zoom like browser PDF viewers
+    let currentRotation = 0;
+    let canvas = null;
+    let ctx = null;
+    
+    // Initialize PDF viewer
+    document.addEventListener('DOMContentLoaded', function() {
+      initializePDFViewer();
+      initializeChat();
+      loadPDF();
+    });
+    
+    function initializePDFViewer() {
+      canvas = document.getElementById('pdfCanvas');
+      ctx = canvas.getContext('2d');
+      
+      const zoomInBtn = document.getElementById('zoomIn');
+      const zoomOutBtn = document.getElementById('zoomOut');
+      const prevPageBtn = document.getElementById('prevPage');
+      const nextPageBtn = document.getElementById('nextPage');
+      const pageInput = document.getElementById('pageInput');
+      const goToPageBtn = document.getElementById('goToPage');
+      
+      zoomInBtn.addEventListener('click', zoomIn);
+      zoomOutBtn.addEventListener('click', zoomOut);
+      prevPageBtn.addEventListener('click', prevPage);
+      nextPageBtn.addEventListener('click', nextPage);
+      goToPageBtn.addEventListener('click', goToPage);
+      pageInput.addEventListener('keypress', function(e) {
+        if (e.key === 'Enter') {
+          goToPage();
+        }
+      });
+      
+      const chatToggle = document.getElementById('chatToggle');
+      const chatClose = document.getElementById('chatClose');
+      const floatingChat = document.getElementById('floatingChat');
+      
+      chatToggle.addEventListener('click', () => {
+        floatingChat.classList.toggle('open');
+        const pdfMain = document.querySelector('.pdf-viewer-main');
+        const pdfControls = document.querySelector('.pdf-controls-overlay');
+        
+        if (floatingChat.classList.contains('open')) {
+          chatToggle.style.display = 'none';
+          pdfMain.classList.add('chat-open');
+          pdfControls.classList.add('chat-open');
+        } else {
+          chatToggle.style.display = 'block';
+          pdfMain.classList.remove('chat-open');
+          pdfControls.classList.remove('chat-open');
+        }
+      });
+      
+      chatClose.addEventListener('click', () => {
+        floatingChat.classList.remove('open');
+        chatToggle.style.display = 'block';
+        const pdfMain = document.querySelector('.pdf-viewer-main');
+        const pdfControls = document.querySelector('.pdf-controls-overlay');
+        pdfMain.classList.remove('chat-open');
+        pdfControls.classList.remove('chat-open');
+      });
+    }
+    
+     function loadPDF() {
+       const pdfUrl = '/uploaded_pdfs/{{ pdf_name }}';
+       
+       // Configure PDF.js worker
+       pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+       
+       // Configure PDF.js for high quality rendering
+       const loadingTask = pdfjsLib.getDocument({
+         url: pdfUrl,
+         cMapUrl: 'https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/cmaps/',
+         cMapPacked: true,
+         standardFontDataUrl: 'https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/standard_fonts/',
+         disableFontFace: false,
+         disableRange: false,
+         disableStream: false,
+         disableAutoFetch: false,
+         disableCreateObjectURL: false,
+         verbosity: 0
+       });
+       
+       loadingTask.promise.then(function(pdf) {
+         console.log('PDF loaded successfully:', pdf);
+         pdfDoc = pdf;
+         totalPages = pdf.numPages;
+         currentPage = 1;
+         
+         updatePageInfo();
+         renderPage();
+         hideLoadingFallback();
+       }).catch(function(error) {
+         console.error('Error loading PDF:', error);
+         showErrorFallback();
+       });
+     }
+    
+     function renderPage() {
+       if (!pdfDoc) return;
+       
+       pdfDoc.getPage(currentPage).then(function(page) {
+         // Get device pixel ratio for high DPI displays (retina, 4K, etc.)
+         const devicePixelRatio = window.devicePixelRatio || 1;
+         
+         // Calculate optimal scale for crisp rendering
+         const scale = currentZoom * devicePixelRatio;
+         
+         const viewport = page.getViewport({ 
+           scale: scale,
+           rotation: currentRotation 
+         });
+         
+         // Set canvas internal size for high DPI rendering
+         canvas.width = viewport.width;
+         canvas.height = viewport.height;
+         
+         // Set canvas display size (what user sees) - no constraints
+         canvas.style.width = (viewport.width / devicePixelRatio) + 'px';
+         canvas.style.height = (viewport.height / devicePixelRatio) + 'px';
+         canvas.style.maxWidth = 'none';
+         canvas.style.maxHeight = 'none';
+         canvas.style.minWidth = 'auto';
+         canvas.style.minHeight = 'auto';
+         
+         // Debug logging
+         console.log('PDF Viewport:', viewport.width, 'x', viewport.height);
+         console.log('Canvas Display Size:', canvas.style.width, 'x', canvas.style.height);
+         console.log('Canvas Internal Size:', canvas.width, 'x', canvas.height);
+         console.log('Current Zoom:', currentZoom);
+         
+         // Clear canvas
+         ctx.clearRect(0, 0, canvas.width, canvas.height);
+         
+         // Set up high DPI rendering
+         ctx.save();
+         ctx.scale(devicePixelRatio, devicePixelRatio);
+         
+         const renderContext = {
+           canvasContext: ctx,
+           viewport: viewport
+         };
+         
+         page.render(renderContext);
+         ctx.restore();
+       });
+     }
+    
+    // Standard zoom levels like browser PDF viewers
+    const zoomLevels = [0.5, 0.75, 1.0, 1.25, 1.5, 2.0, 2.5, 3.0, 4.0];
+    
+    function zoomIn() {
+      const currentIndex = zoomLevels.findIndex(level => level >= currentZoom);
+      const nextIndex = Math.min(currentIndex + 1, zoomLevels.length - 1);
+      currentZoom = zoomLevels[nextIndex];
+      updateZoomInfo();
+      renderPage();
+    }
+    
+    function zoomOut() {
+      const currentIndex = zoomLevels.findIndex(level => level >= currentZoom);
+      const prevIndex = Math.max(currentIndex - 1, 0);
+      currentZoom = zoomLevels[prevIndex];
+      updateZoomInfo();
+      renderPage();
+    }
+    
+    function rotate() {
+      currentRotation = (currentRotation + 90) % 360;
+      renderPage();
+    }
+    
+     function fitToWidth() {
+       if (!pdfDoc) return;
+       
+       pdfDoc.getPage(currentPage).then(function(page) {
+         const container = document.getElementById('pdfContainer');
+         const containerWidth = container.clientWidth; // Full width, no padding
+         const viewport = page.getViewport({ scale: 1.0 });
+         const scale = containerWidth / viewport.width;
+         currentZoom = Math.min(Math.max(scale, 0.5), 4.0); // Clamp between 50% and 400%
+         updateZoomInfo();
+         renderPage();
+       });
+     }
+    
+    function prevPage() {
+      if (currentPage > 1) {
+        currentPage--;
+        updatePageInfo();
+        renderPage();
+      }
+    }
+    
+    function nextPage() {
+      if (currentPage < totalPages) {
+        currentPage++;
+        updatePageInfo();
+        renderPage();
+      }
+    }
+    
+    function goToPage() {
+      const pageInput = document.getElementById('pageInput');
+      const pageNumber = parseInt(pageInput.value);
+      
+      if (pageNumber >= 1 && pageNumber <= totalPages) {
+        currentPage = pageNumber;
+        updatePageInfo();
+        renderPage();
+      } else {
+        // Reset to current page if invalid
+        pageInput.value = currentPage;
+      }
+    }
+    
+    function updatePageInfo() {
+      const pageInfo = document.getElementById('pageInfo');
+      const currentPageSpan = document.getElementById('currentPage');
+      const totalPagesSpan = document.getElementById('totalPages');
+      const pageInput = document.getElementById('pageInput');
+      const prevBtn = document.getElementById('prevPage');
+      const nextBtn = document.getElementById('nextPage');
+      
+      if (pageInfo) pageInfo.textContent = `${currentPage} / ${totalPages}`;
+      if (currentPageSpan) currentPageSpan.textContent = currentPage;
+      if (totalPagesSpan) totalPagesSpan.textContent = totalPages;
+      if (pageInput) {
+        pageInput.value = currentPage;
+        pageInput.max = totalPages;
+      }
+      if (prevBtn) prevBtn.disabled = currentPage <= 1;
+      if (nextBtn) nextBtn.disabled = currentPage >= totalPages;
+    }
+    
+    function updateZoomInfo() {
+      const zoomInfo = document.getElementById('zoomLevel');
+      if (zoomInfo) zoomInfo.textContent = `${Math.round(currentZoom * 100)}%`;
+    }
+    
+    function initializeChat() {
+      const chatInput = document.getElementById('chatInput');
+      const chatSend = document.getElementById('chatSend');
+      const chatMessages = document.getElementById('chatMessages');
+      
+      chatInput.addEventListener('input', function() {
+        chatSend.disabled = this.value.trim().length === 0;
+      });
+      
+      chatInput.addEventListener('keypress', function(e) {
+        if (e.key === 'Enter' && !e.shiftKey) {
+          e.preventDefault();
+          sendMessage();
+        }
+      });
+      
+      chatSend.addEventListener('click', sendMessage);
+    }
+    
+    function sendMessage() {
+      const chatInput = document.getElementById('chatInput');
+      const chatSend = document.getElementById('chatSend');
+      const message = chatInput.value.trim();
+      
+      if (!message) return;
+      
+      // Add user message
+      addMessage(message, 'user');
+      chatInput.value = '';
+      chatSend.disabled = true;
+      
+      // Show thinking indicator
+      addThinkingIndicator();
+      
+      // Send to backend with PDF context
+      fetch('/query/', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          query: `[PDF: {{ pdf_name }}] ${message}`,
+          conversation_id: null,
+          pdf_context: '{{ pdf_name }}'
+        })
+      })
+      .then(response => response.json())
+      .then(data => {
+        removeThinkingIndicator();
+        console.log('Chat response:', data);
+        if (data.answer) {
+          addMessage(data.answer, 'assistant', data.citations || [], data.follow_up_questions || []);
+        } else {
+          addMessage(data.error || 'Sorry, I encountered an error.', 'assistant');
+        }
+      })
+      .catch(error => {
+        removeThinkingIndicator();
+        addMessage('Sorry, I encountered an error: ' + error.message, 'assistant');
+      })
+      .finally(() => {
+        chatSend.disabled = false;
+      });
+    }
+    
+    function addMessage(content, sender, citations = [], followUpQuestions = []) {
+      const chatMessages = document.getElementById('chatMessages');
+      const emptyState = chatMessages.querySelector('.empty-state');
+      if (emptyState) emptyState.remove();
+      
+      const messageDiv = document.createElement('div');
+      messageDiv.className = `message ${sender}`;
+      
+      const avatar = sender === 'user' ? 'U' : 'AI';
+      const time = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+      
+      let citationsHtml = '';
+      if (citations && citations.length > 0) {
+        citationsHtml = `
+          <div class="citations">
+            <strong>Sources:</strong>
+            <ul>
+              ${citations.map((citation, index) => {
+                const tfidfScore = citation.tfidf_score ? citation.tfidf_score.toFixed(3) : 'N/A';
+                const similarityScore = citation.similarity_score ? citation.similarity_score.toFixed(3) : 'N/A';
+                const pageDisplay = citation.page_display || (citation.page_numbers ? citation.page_numbers.join(', ') : 'N/A');
+                
+                return `
+                  <li style="margin: 6px 0; padding: 8px; background: white; border-radius: 4px;">
+                    <strong>[${index + 1}]</strong> 
+                    TF-IDF score: <span style="color: #059669; font-weight: 600;">${tfidfScore}</span> | 
+                    Similarity score: <span style="color: #3b82f6; font-weight: 600;">${similarityScore}</span> | 
+                    Pages: <span style="color: #dc2626; font-weight: 600;">${pageDisplay}</span>
+                  </li>
+                `;
+              }).join('')}
+            </ul>
+          </div>
+        `;
+      }
+      
+      let followUpHtml = '';
+      if (followUpQuestions && followUpQuestions.length > 0) {
+        followUpHtml = `
+          <div class="follow-up-questions">
+            <strong>Related Questions:</strong>
+            <div class="follow-up-list">
+              ${followUpQuestions.map(question => `
+                <div class="follow-up-item" onclick="useSuggestion('${question.replace(/'/g, "\\'")}')">
+                  ${question}
+                </div>
+              `).join('')}
+            </div>
+          </div>
+        `;
+      }
+      
+      messageDiv.innerHTML = `
+        <div class="message-avatar">${avatar}</div>
+        <div class="message-content">
+          ${formatContent(content)}
+          ${citationsHtml}
+          ${followUpHtml}
+          <div class="message-time">${time}</div>
+        </div>
+      `;
+      
+      chatMessages.appendChild(messageDiv);
+      chatMessages.scrollTop = chatMessages.scrollHeight;
+    }
+    
+    function formatContent(content) {
+      return content
+        .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+        .replace(/\n/g, '<br>');
+    }
+    
+    function addThinkingIndicator() {
+      const chatMessages = document.getElementById('chatMessages');
+      const thinkingDiv = document.createElement('div');
+      thinkingDiv.className = 'message thinking';
+      thinkingDiv.id = 'thinking-indicator';
+      thinkingDiv.innerHTML = `
+        <div class="message-avatar">AI</div>
+        <div class="message-content">
+          <div class="thinking-dots">
+            <span></span><span></span><span></span>
+          </div>
+        </div>
+      `;
+      chatMessages.appendChild(thinkingDiv);
+      chatMessages.scrollTop = chatMessages.scrollHeight;
+    }
+    
+    function removeThinkingIndicator() {
+      const thinking = document.getElementById('thinking-indicator');
+      if (thinking) thinking.remove();
+    }
+    
+    function useSuggestion(suggestion) {
+      const chatInput = document.getElementById('chatInput');
+      chatInput.value = suggestion;
+      chatInput.focus();
+    }
+    
+    function showLoadingFallback() {
+      const fallback = document.getElementById('pdfLoadingFallback');
+      if (fallback) fallback.style.display = 'block';
+    }
+    
+    function hideLoadingFallback() {
+      const fallback = document.getElementById('pdfLoadingFallback');
+      if (fallback) fallback.style.display = 'none';
+    }
+    
+    function showErrorFallback() {
+      const loadingFallback = document.getElementById('pdfLoadingFallback');
+      const errorFallback = document.getElementById('pdfErrorFallback');
+      if (loadingFallback) loadingFallback.style.display = 'none';
+      if (errorFallback) errorFallback.style.display = 'block';
+    }
+    
+    function downloadPDF() {
+      const pdfUrl = '/uploaded_pdfs/{{ pdf_name }}';
+      const link = document.createElement('a');
+      link.href = pdfUrl;
+      link.download = '{{ pdf_display_name }}.pdf';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    }
+    
+    // Show loading fallback initially
+    document.addEventListener('DOMContentLoaded', function() {
+      showLoadingFallback();
+      
+      // Check if PDF is blocked after a delay
+      setTimeout(() => {
+        const iframe = document.getElementById('pdfFrame');
+        const object = document.getElementById('pdfObject');
+        
+        if (iframe) {
+          try {
+            // Try to access iframe content to detect blocking
+            const iframeDoc = iframe.contentDocument || iframe.contentWindow.document;
+            if (!iframeDoc || iframeDoc.body.innerHTML.includes('blocked') || iframeDoc.body.innerHTML.includes('refused')) {
+              console.log('PDF blocked by browser, trying object tag');
+              iframe.style.display = 'none';
+              if (object) {
+                object.style.display = 'block';
+                hideLoadingFallback();
+              } else {
+                showErrorFallback();
+              }
+            } else {
+              hideLoadingFallback();
+            }
+          } catch (e) {
+            console.log('PDF iframe blocked, trying object tag');
+            iframe.style.display = 'none';
+            if (object) {
+              object.style.display = 'block';
+              hideLoadingFallback();
+            } else {
+              showErrorFallback();
+            }
+          }
+        }
+      }, 2000);
+      
+      // Prevent PDF from opening in browser's default viewer
+      const iframe = document.getElementById('pdfFrame');
+      if (iframe) {
+        iframe.addEventListener('load', function() {
+          console.log('PDF iframe loaded, ensuring inline display');
+          // Force iframe to stay in place
+          iframe.style.pointerEvents = 'auto';
+        });
+        
+        iframe.addEventListener('error', function() {
+          console.log('PDF iframe error, showing error fallback');
+          showErrorFallback();
+        });
+      }
+    });
+    
+    // Prevent any clicks from opening PDF in new tab
+    document.addEventListener('click', function(e) {
+      if (e.target.tagName === 'IFRAME' && e.target.id === 'pdfFrame') {
+        e.preventDefault();
+        e.stopPropagation();
+        return false;
+      }
+    });
+  </script>
+</body>
+</html>
+
