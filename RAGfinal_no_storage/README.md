@@ -4,7 +4,7 @@ Production‑ready, local RAG app with a modern Django frontend. Upload PDFs, em
 
 ## Key Features (Frontend)
 
-- Drag & drop multi‑PDF upload with file list management
+- drop multi‑PDF upload with file list management
 - Real‑time processing status (ingestion timings logged to `time_report_ingestion.csv`)
 - Chat interface with:
   - Thinking indicator below the user message
