@@ -35,7 +35,7 @@ def dashboard_view(request):
     Initializes RAG system/ChromaDB on load.
     """
     try:
-        from rag_app import get_chroma_collection
+        from rag_app import get_chroma_collection, process_pdf
         
         # Check if ChromaDB collection exists and has data
         try:
@@ -43,18 +43,33 @@ def dashboard_view(request):
             count = collection.count()
             print(f"[CHROMADB] Found {count} documents in ChromaDB")
             
-            if count == 0:
-                print("[CHROMADB] Empty collection, processing PDFs once...")
-                process_all_existing_pdfs_once()
-            else:
-                print(f"[CHROMADB] Using existing {count} documents from ChromaDB")
-                # Load embeddings into memory
-                load_embeddings_from_chromadb()
+            # Use existing documents
+            load_embeddings_from_chromadb()
+            
+            # SMART AUTO-PROCESSING (Gentle Mode)
+            # Check for ONE file that exists in uploaded_pdfs but NOT in ChromaDB
+            if os.path.exists(UPLOAD_DIR):
+                pdf_files = [f for f in os.listdir(UPLOAD_DIR) if f.lower().endswith('.pdf')]
                 
+                # Get list of already processed files from ChromaDB metadata (cached in memory)
+                from rag_app import in_memory_metadata
+                processed_filenames = set(m.get('source_pdf') for m in in_memory_metadata if m.get('source_pdf'))
+                
+                for pdf_file in pdf_files:
+                    if pdf_file not in processed_filenames:
+                        print(f"[AUTO-PROCESS] Found new file: {pdf_file}. Processing ONE file gently...")
+                        try:
+                            file_path = os.path.join(UPLOAD_DIR, pdf_file)
+                            # Process just this one file
+                            process_pdf(file_path, pdf_file, None)
+                            print(f"[AUTO-PROCESS] Successfully processed {pdf_file}")
+                            # Break after one file to save RAM/CPU (Lazy Batching)
+                            break 
+                        except Exception as e:
+                            print(f"[AUTO-PROCESS] Failed to process {pdf_file}: {e}")
+                            
         except Exception as e:
-            print(f"[CHROMADB] Collection not found or error: {e}")
-            print("[CHROMADB] Processing PDFs once...")
-            process_all_existing_pdfs_once()
+            print(f"[CHROMADB] Collection check error: {e}")
             
     except Exception as e:
         print(f"[CHROMADB] Error: {e}")
@@ -240,10 +255,7 @@ def upload_files(request):
                     for chunk in file.chunks():
                         destination.write(chunk)
                 
-                # Process PDF (this will update status to 'ready' when done)
-                process_pdf(file_path, file.name, conversation_id)
-                
-                # Link file to conversation if provided
+                # Link file to conversation if provided (Moved BEFORE processing to ensure it's linked even if processing fails/crashes)
                 if conversation_id:
                     if request.user.is_authenticated:
                         try:
@@ -263,6 +275,14 @@ def upload_files(request):
                             request.session['conversation_documents'][conversation_id].append(file.name)
                         request.session.modified = True
                         request.session.save()
+                
+                # Process PDF (Doing this LAST so that Database Link is safe)
+                try:
+                    process_pdf(file_path, file.name, conversation_id)
+                except Exception as e:
+                    print(f"[ERROR] Failed to process PDF {file.name}: {e}")
+                    # We do NOT raise the error here, so the user still gets a "Success" response
+                    # and the file is in their library, even if AI processing failed.
                 
                 processed_files.append(file.name)
         
