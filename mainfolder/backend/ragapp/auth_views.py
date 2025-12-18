@@ -6,8 +6,10 @@ from django.views.decorators.http import require_http_methods
 from django.views.decorators.csrf import ensure_csrf_cookie, csrf_exempt
 from django.middleware.csrf import get_token
 
+@csrf_exempt
 @require_http_methods(["POST"])
 def api_register(request):
+    print("[AUTH] Register Request Received")
     try:
         data = json.loads(request.body)
         email = data.get('email')
@@ -31,20 +33,24 @@ def api_register(request):
         
         # Create User
         # We use email as the username for simplicity in this system
+        print(f"[AUTH] Creating user: {email}")
         user = User.objects.create_user(username=email, email=email, password=password)
-        
-        # Auto-login removed as per new flow requirements
-        # login(request, user)
+        print(f"[AUTH] User created: {user.id}")
         
         return JsonResponse({'message': 'Registration successful. Please log in.', 'user': {'email': user.email}})
 
     except json.JSONDecodeError:
         return JsonResponse({'error': 'Invalid JSON'}, status=400)
     except Exception as e:
+        import traceback
+        traceback.print_exc()
+        print(f"[AUTH ERROR] Register failed: {e}")
         return JsonResponse({'error': str(e)}, status=500)
 
+@csrf_exempt
 @require_http_methods(["POST"])
 def api_login(request):
+    print("[AUTH] Login Request Received")
     try:
         data = json.loads(request.body)
         email = data.get('email')
@@ -54,17 +60,23 @@ def api_login(request):
             return JsonResponse({'error': 'Email and Password are required.'}, status=400)
 
         # Authenticate using email as username
+        print(f"[AUTH] Authenticating: {email}")
         user = authenticate(request, username=email, password=password)
 
         if user is not None:
             login(request, user)
+            print(f"[AUTH] Login successful: {user.email}")
             return JsonResponse({'message': 'Login successful', 'user': {'email': user.email}})
         else:
+            print(f"[AUTH] Login failed: Invalid credentials")
             return JsonResponse({'error': 'Invalid email or password.'}, status=401)
 
     except json.JSONDecodeError:
         return JsonResponse({'error': 'Invalid JSON'}, status=400)
     except Exception as e:
+        import traceback
+        traceback.print_exc()
+        print(f"[AUTH ERROR] Login failed: {e}")
         return JsonResponse({'error': str(e)}, status=500)
 
 @require_http_methods(["POST"])
