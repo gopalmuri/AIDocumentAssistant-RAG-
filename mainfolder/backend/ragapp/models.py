@@ -1,63 +1,59 @@
 from django.db import models
 from django.contrib.auth.models import User
 
-
 class Conversation(models.Model):
-    """Stores a single chat conversation per user with messages as JSON."""
-    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='conversations')
-    title = models.CharField(max_length=255, blank=True)
-    messages = models.JSONField(default=list)  # [{sender: 'user'|'assistant', content: str, timestamp: iso}]
-    documents = models.JSONField(default=list)  # list of filenames linked to this conversation
-    last_citations = models.JSONField(default=list)  # last returned citations for instant display
-    last_follow_ups = models.JSONField(default=list)  # last follow-up questions for instant display
-    is_pinned = models.BooleanField(default=False)
-    is_favorite = models.BooleanField(default=False)
+    user = models.ForeignKey(User, on_delete=models.CASCADE, null=True, blank=True)
+    title = models.CharField(max_length=255)
     created_at = models.DateTimeField(auto_now_add=True)
-    updated_at = models.DateTimeField(auto_now=True)
+    messages = models.JSONField(default=list)  # Stores chat history: [{"role": "user", "content": "hi"}, ...]
+    documents = models.JSONField(default=list) # List of filenames involved in this conversation
+    is_favorite = models.BooleanField(default=False) 
 
-    class Meta:
-        ordering = ['-updated_at']
-
-    def __str__(self) -> str:
-        base = self.title or (self.messages[0]['content'][:40] if self.messages else 'Conversation')
-        return f"{base} ({self.user.username})"
-
+    def __str__(self):
+        return f"{self.title} ({self.user.username if self.user else 'Guest'})"
 
 class Favorite(models.Model):
-    """Stores favorite documents for a user."""
-    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='favorites')
-    filename = models.CharField(max_length=255)
+    user = models.ForeignKey(User, on_delete=models.CASCADE)
+    document_name = models.CharField(max_length=255)
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
-        unique_together = ('user', 'filename')
-        ordering = ['-created_at']
+        unique_together = ('user', 'document_name')
 
     def __str__(self):
-        return f"{self.user.username} - {self.filename}"
-
+        return f"{self.user.username} - {self.document_name}"
 
 class FavoriteMessage(models.Model):
-    """Stores favorite Q&A messages for a user."""
-    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='favorite_messages')
-    question = models.TextField()
-    answer = models.TextField()
-    timestamp = models.DateTimeField(auto_now_add=True)
-    
-    # Optional: Context/Source document (if needed later)
-    source_document = models.CharField(max_length=255, blank=True, null=True)
-
-    class Meta:
-        ordering = ['-timestamp']
+    user = models.ForeignKey(User, on_delete=models.CASCADE)
+    conversation = models.ForeignKey(Conversation, on_delete=models.CASCADE)
+    message_content = models.TextField()
+    message_index = models.IntegerField()  # Index in the messages list
+    created_at = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):
-        return f"{self.user.username} - {self.question[:30]}..."
-
+        return f"{self.user.username} - {self.message_content[:30]}..."
 
 class UserProfile(models.Model):
-    user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='userprofile')
-    avatar = models.ImageField(upload_to='avatars/', blank=True, null=True)
-    updated_at = models.DateTimeField(auto_now=True)
+    user = models.OneToOneField(User, on_delete=models.CASCADE)
+    avatar = models.ImageField(upload_to='avatars/', null=True, blank=True)
+    bio = models.TextField(max_length=500, blank=True)
+    location = models.CharField(max_length=30, blank=True)
+    birth_date = models.DateField(null=True, blank=True)
 
     def __str__(self):
-        return f"{self.user.username} Profile"
+        return self.user.username
+
+class UserDocument(models.Model):
+    """
+    Tracks ownership of uploaded documents to ensure privacy.
+    Global documents (Admins) have user=None (or handle via specific Admin check).
+    """
+    user = models.ForeignKey(User, on_delete=models.CASCADE)
+    filename = models.CharField(max_length=255) # Matches the filename in uploaded_pdfs
+    uploaded_at = models.DateTimeField(auto_now_add=True)
+    
+    class Meta:
+        unique_together = ('user', 'filename')
+
+    def __str__(self):
+        return f"{self.filename} ({self.user.username})"

@@ -256,6 +256,15 @@ def upload_files(request):
                         destination.write(chunk)
                 
                 # Link file to conversation if provided (Moved BEFORE processing to ensure it's linked even if processing fails/crashes)
+                
+                # PRIVACY UPDATE: Track User Ownership
+                if request.user.is_authenticated:
+                    try:
+                        from .models import UserDocument
+                        UserDocument.objects.get_or_create(user=request.user, filename=file.name)
+                        print(f"[PRIVACY] Linked {file.name} to user {request.user.username}")
+                    except Exception as e:
+                        print(f"[PRIVACY] Error linking document: {e}")
                 if conversation_id:
                     if request.user.is_authenticated:
                         try:
@@ -833,8 +842,32 @@ def get_pdf_library(request):
         
         if os.path.exists(UPLOAD_DIR):
             all_files = os.listdir(UPLOAD_DIR)
+
+            # PRIVACY FILTER: Get list of user's owned files
+            user_documents = set()
+            if request.user.is_authenticated:
+                from .models import UserDocument
+                # Get filenames owned by this user
+                user_docs = UserDocument.objects.filter(user=request.user).values_list('filename', flat=True)
+                user_documents.update(user_docs)
             
+            # Also get list of ALL owned files to identify "Global" ones
+            # A file is Global if NO ONE owns it.
+            # (If User A owns it, User B shouldn't see it unless B also owns it).
+            if request.user.is_authenticated:
+                 # Logic: Show if (File in UserDocs) OR (File NOT in AnyUserDocs)
+                 # Get all filenames that HAVE an owner
+                 all_owned_files = set(UserDocument.objects.values_list('filename', flat=True))
+                 
             for filename in all_files:
+                # PRIVACY CHECK
+                if request.user.is_authenticated:
+                    is_mine = filename in user_documents
+                    is_global = filename not in all_owned_files
+                    
+                    if not (is_mine or is_global):
+                        # Skip if it belongs to someone else but not me, and not global
+                        continue
                 if filename.lower().endswith('.pdf'):
                     existing_filenames.add(filename)
                     filepath = os.path.join(UPLOAD_DIR, filename)
