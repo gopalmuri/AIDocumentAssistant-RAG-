@@ -8,7 +8,7 @@ import datetime
 import nltk
 nltk.download('punkt')
 from nltk.tokenize import word_tokenize
-from sentence_transformers import SentenceTransformer
+# from sentence_transformers import SentenceTransformer # Moved to get_model
 import chromadb
 # import ollama # Removed for production deployment
 from sklearn.metrics.pairwise import cosine_similarity
@@ -29,6 +29,7 @@ def get_model():
     global _model
     if _model is None:
         print("[INFO] Loading SentenceTransformer model...")
+        from sentence_transformers import SentenceTransformer
         _model = SentenceTransformer('all-MiniLM-L6-v2')
     return _model
 
@@ -36,6 +37,7 @@ def get_nlp():
     global _nlp
     if _nlp is None:
         print("[INFO] Loading Spacy model...")
+        import spacy
         _nlp = spacy.load("en_core_web_sm")
     return _nlp
 
@@ -85,8 +87,8 @@ def clean_text(text):
     text = re.sub(r'\s+', ' ', text)#one or more characters that are not ASCII” (like emojis, Chinese, Tamil, etc.).
     return text.strip()#
 
-import spacy
-from spacy.lang.en import English
+# import spacy
+# from spacy.lang.en import English
 # nlp = spacy.load("en_core_web_sm") # MOVED TO get_nlp()
 
 #spaCy is used for intelligent text chunking that preserves semantic meaning
