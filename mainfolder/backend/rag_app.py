@@ -20,7 +20,25 @@ from collections import defaultdict
 from typing import List, Dict, Any
 from groq import Groq
 # Constants
-model = SentenceTransformer('all-MiniLM-L6-v2')
+# Constants
+# Global variable for lazy loading
+_model = None
+_nlp = None
+
+def get_model():
+    global _model
+    if _model is None:
+        print("[INFO] Loading SentenceTransformer model...")
+        _model = SentenceTransformer('all-MiniLM-L6-v2')
+    return _model
+
+def get_nlp():
+    global _nlp
+    if _nlp is None:
+        print("[INFO] Loading Spacy model...")
+        _nlp = spacy.load("en_core_web_sm")
+    return _nlp
+
 pdf_dir = os.path.join(os.path.dirname(os.path.dirname(__file__)), "uploaded_pdfs")
 log_file = os.path.join(os.path.dirname(os.path.dirname(__file__)), "time_report_ingestion.csv")
 cache_dir = os.path.join(os.path.dirname(os.path.dirname(__file__)), "embeddings_cache")
@@ -69,8 +87,7 @@ def clean_text(text):
 
 import spacy
 from spacy.lang.en import English
-
-nlp = spacy.load("en_core_web_sm")
+# nlp = spacy.load("en_core_web_sm") # MOVED TO get_nlp()
 
 #spaCy is used for intelligent text chunking that preserves semantic meaning
 
@@ -79,7 +96,8 @@ def chunk_text(text, chunk_size=800, overlap=50):
     Improved chunking using spaCy sentence segmentation to better capture semantic units.
     Chunks are created by grouping sentences until chunk_size tokens are reached, with overlap.
     """
-    doc = nlp(text)
+    nlp_engine = get_nlp()
+    doc = nlp_engine(text)
     sentences = [sent.text.strip() for sent in doc.sents]
     chunks = []
     current_chunk = []
@@ -127,7 +145,8 @@ def process_pdf(file_path, filename, conversation_id: str | None = None):
         global_chunk_idx = 0
         for page_info in page_texts:
             page_chunks = chunk_text(page_info["text"])
-            page_embeddings = model.encode(page_chunks)  # Generate embeddings once
+            embedding_model = get_model()
+            page_embeddings = embedding_model.encode(page_chunks)  # Generate embeddings once
             
             for idx, (chunk, embedding) in enumerate(zip(page_chunks, page_embeddings)):
                 doc_id = f"{filename}_{global_chunk_idx}"
@@ -379,6 +398,10 @@ def _load_conversation_cache(conversation_id: str) -> bool:
     except Exception as e:
         print(f"[CACHE] Failed to load cache for {conversation_id}: {e}")
         return False
+
+def convert_query_to_embedding(query):
+    embedding_model = get_model()
+    return embedding_model.encode(query)
 
 def retrieve_similar_chunks(query, top_k=10, similarity_threshold=0.7, conversation_id: str | None = None, custom_chunks=None, custom_embeddings=None):
     try:
