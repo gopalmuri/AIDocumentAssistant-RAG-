@@ -35,11 +35,11 @@ def dashboard_view(request):
     Initializes RAG system/ChromaDB on load.
     """
     try:
-        from rag_app import chroma_client, collection_name
+        from rag_app import get_chroma_collection
         
         # Check if ChromaDB collection exists and has data
         try:
-            collection = chroma_client.get_collection(collection_name)
+            collection = get_chroma_collection()
             count = collection.count()
             print(f"[CHROMADB] Found {count} documents in ChromaDB")
             
@@ -65,9 +65,9 @@ def dashboard_view(request):
 def load_embeddings_from_chromadb():
     """Load embeddings from ChromaDB into memory"""
     try:
-        from rag_app import chroma_client, collection_name, in_memory_chunks, in_memory_embeddings
+        from rag_app import get_chroma_collection, in_memory_chunks, in_memory_embeddings
         
-        collection = chroma_client.get_collection(collection_name)
+        collection = get_chroma_collection()
         count = collection.count()
         
         if count > 0:
@@ -153,11 +153,11 @@ def load_embeddings_from_chromadb():
 def process_all_existing_pdfs_once():
     """Process all PDFs once and store in ChromaDB"""
     try:
-        from rag_app import chroma_client, collection_name
+        from rag_app import get_chroma_collection
         
         # Check if already processed
         try:
-            collection = chroma_client.get_collection(collection_name)
+            collection = get_chroma_collection()
             count = collection.count()
             if count > 0:
                 print(f"[CHROMADB] Already processed {count} documents, skipping...")
@@ -377,9 +377,9 @@ def query(request):
             print(f"[DEBUG] User authenticated: {request.user.is_authenticated}")
             
             # Ensure PDFs are processed before querying
-            from rag_app import chroma_client, collection_name, in_memory_embeddings
+            from rag_app import get_chroma_collection, in_memory_embeddings
             try:
-                collection = chroma_client.get_collection(collection_name)
+                collection = get_chroma_collection()
                 count = collection.count()
                 print(f"[CHROMADB] Found {count} documents in ChromaDB")
                 print(f"[MEMORY] Found {len(in_memory_embeddings)} embeddings in memory")
@@ -788,7 +788,7 @@ def clear_embeddings(request):
 def get_pdf_library(request):
     """Get all PDF files from the uploaded_pdfs folder with metadata"""
     try:
-        from rag_app import chroma_client, collection_name
+        from rag_app import get_chroma_collection
         import PyPDF2
         
         pdf_files = []
@@ -797,7 +797,7 @@ def get_pdf_library(request):
         # Get all processed documents from ChromaDB
         processed_docs = {}
         try:
-            collection = chroma_client.get_collection(collection_name)
+            collection = get_chroma_collection()
             all_docs = collection.get(include=['metadatas'])
             
             if all_docs and 'metadatas' in all_docs:
@@ -871,7 +871,7 @@ def get_pdf_library(request):
         
         # Clean up ChromaDB for deleted files
         try:
-            collection = chroma_client.get_collection(collection_name)
+            collection = get_chroma_collection()
             all_docs = collection.get(include=['metadatas'])
             
             if all_docs and 'metadatas' in all_docs:
@@ -973,9 +973,9 @@ def search_pdfs(request):
             # Search for relevant PDFs using existing RAG logic
             try:
                 # Ensure PDFs are processed before searching
-                from rag_app import chroma_client, collection_name
+                from rag_app import get_chroma_collection
                 try:
-                    collection = chroma_client.get_collection(collection_name)
+                    collection = get_chroma_collection()
                     count = collection.count()
                     if count == 0:
                         print("[CHROMADB] No documents found during search, processing PDFs once...")
@@ -1063,7 +1063,7 @@ def pdf_viewer(request, pdf_name):
 def system_status(request):
     """Check system status - PDFs and ChromaDB"""
     try:
-        from rag_app import chroma_client, collection_name
+        from rag_app import get_chroma_collection
         
         # Count PDFs
         pdf_count = 0
@@ -1074,7 +1074,7 @@ def system_status(request):
         embeddings_count = 0
         embeddings_loaded = False
         try:
-            collection = chroma_client.get_collection(collection_name)
+            collection = get_chroma_collection()
             embeddings_count = collection.count()
             embeddings_loaded = embeddings_count > 0
         except:
