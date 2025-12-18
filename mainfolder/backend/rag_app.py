@@ -1,24 +1,22 @@
 import os
-import fitz
+# import fitz # Moved to extract_text_per_page
 import re
 import json
 import csv
 import time
 import datetime
-import nltk
-nltk.download('punkt')
-from nltk.tokenize import word_tokenize
+# import nltk # Moved to usage
 # from sentence_transformers import SentenceTransformer # Moved to get_model
-import chromadb
+# import chromadb # Moved to get_chroma_collection
 # import ollama # Removed for production deployment
-from sklearn.metrics.pairwise import cosine_similarity
-import numpy as np
-import textwrap
-import pdfplumber
-from sklearn.feature_extraction.text import TfidfVectorizer
+# from sklearn.metrics.pairwise import cosine_similarity # Moved to usage
+# import numpy as np # Moved where needed or kept if light (numpy is medium, generally okay if simple, but let's be safe for Free Tier)
+# import textwrap
+# import pdfplumber
+# from sklearn.feature_extraction.text import TfidfVectorizer # Moved to usage
 from collections import defaultdict
 from typing import List, Dict, Any
-from groq import Groq
+# from groq import Groq # Moved to query_gemini
 # Constants
 # Constants
 # Global variable for lazy loading
@@ -45,16 +43,24 @@ pdf_dir = os.path.join(os.path.dirname(os.path.dirname(__file__)), "uploaded_pdf
 log_file = os.path.join(os.path.dirname(os.path.dirname(__file__)), "time_report_ingestion.csv")
 cache_dir = os.path.join(os.path.dirname(os.path.dirname(__file__)), "embeddings_cache")
 
-# ChromaDB setup
-project_root = os.path.dirname(os.path.dirname(__file__))
-chroma_client = chromadb.PersistentClient(path=os.path.join(project_root, "chroma_db"))
-collection_name = "rag_documents"
-try:
-    collection = chroma_client.get_collection(collection_name)
-    print(f"[CHROMADB] Using existing collection: {collection_name}")
-except:
-    collection = chroma_client.create_collection(collection_name)
-    print(f"[CHROMADB] Created new collection: {collection_name}")
+# Lazy ChromaDB
+_collection = None
+
+def get_chroma_collection():
+    global _collection
+    if _collection is None:
+        print("[INFO] Loading ChromaDB...")
+        import chromadb
+        project_root = os.path.dirname(os.path.dirname(__file__))
+        chroma_client = chromadb.PersistentClient(path=os.path.join(project_root, "chroma_db"))
+        collection_name = "rag_documents"
+        try:
+            _collection = chroma_client.get_collection(collection_name)
+            print(f"[CHROMADB] Using existing collection: {collection_name}")
+        except:
+            _collection = chroma_client.create_collection(collection_name)
+            print(f"[CHROMADB] Created new collection: {collection_name}")
+    return _collection
 
 # In-memory storage for backward compatibility
 in_memory_chunks = {}  # Store all chunks in memory as dictionary
@@ -68,6 +74,7 @@ os.makedirs(cache_dir, exist_ok=True)
 # -------- PDF Utils -------- #
 
 def extract_text_per_page(pdf_path):
+    import fitz
     doc = fitz.open(pdf_path)
     page_texts = []
     for page_num in range(len(doc)):
@@ -122,6 +129,7 @@ def chunk_text(text, chunk_size=800, overlap=50):
 
 def analyze_pdf(file_path):
     try:
+        import pdfplumber
         with pdfplumber.open(file_path) as pdf:
             num_pages = len(pdf.pages)
             total_words = 0
@@ -161,7 +169,8 @@ def process_pdf(file_path, filename, conversation_id: str | None = None):
                     "conversation_id": conversation_id if conversation_id else "global",
                 }
                 # Store in ChromaDB
-                collection.add(
+                # Store in ChromaDB
+                get_chroma_collection().add(
                     documents=[chunk],
                     embeddings=[embedding.tolist()],
                     metadatas=[metadata],
@@ -422,6 +431,10 @@ def retrieve_similar_chunks(query, top_k=10, similarity_threshold=0.7, conversat
             similarities = []
             for chunk_id, chunk_embedding in custom_embeddings.items():
                 # Reshape to 2D arrays for cosine_similarity
+                # Reshape to 2D arrays for cosine_similarity
+                import numpy as np
+                from sklearn.metrics.pairwise import cosine_similarity
+                
                 query_2d = query_embedding.reshape(1, -1) if hasattr(query_embedding, 'reshape') else np.array(query_embedding).reshape(1, -1)
                 chunk_2d = chunk_embedding.reshape(1, -1) if hasattr(chunk_embedding, 'reshape') else np.array(chunk_embedding).reshape(1, -1)
                 similarity = cosine_similarity(query_2d, chunk_2d)[0][0]
@@ -457,7 +470,8 @@ def retrieve_similar_chunks(query, top_k=10, similarity_threshold=0.7, conversat
                 where_clause = {"conversation_id": conversation_id}
             
             # Query ChromaDB
-            results = collection.query(
+            # Query ChromaDB
+            results = get_chroma_collection().query(
                 query_embeddings=[query_embedding.tolist()],
                 n_results=top_k,
                 where=where_clause
@@ -500,6 +514,10 @@ def tfidf_filter_chunks(query, retrieved_chunks, threshold=0.1):
 
     chunk_texts = [chunk.get("chunk_text", chunk.get("content", "")) for chunk in retrieved_chunks]
     corpus = [query] + chunk_texts
+    
+    from sklearn.feature_extraction.text import TfidfVectorizer
+    from sklearn.metrics.pairwise import cosine_similarity
+    
     vectorizer = TfidfVectorizer()
     tfidf_matrix = vectorizer.fit_transform(corpus)
     query_vector = tfidf_matrix[0]
