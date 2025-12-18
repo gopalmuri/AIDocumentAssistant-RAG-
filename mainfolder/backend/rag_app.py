@@ -10,7 +10,7 @@ nltk.download('punkt')
 from nltk.tokenize import word_tokenize
 from sentence_transformers import SentenceTransformer
 import chromadb
-import ollama
+# import ollama # Removed for production deployment
 from sklearn.metrics.pairwise import cosine_similarity
 import numpy as np
 import textwrap
