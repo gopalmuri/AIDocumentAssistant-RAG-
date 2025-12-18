@@ -1,0 +1,136 @@
+<!-- Custom Auth Modal (Clerk Replica) -->
+<div id="auth-modal-overlay" class="auth-modal-overlay" style="display: none;">
+    <div class="auth-modal-card">
+        <button id="auth-close-btn" class="auth-close-btn">&times;</button>
+
+        <!-- Header -->
+        <div class="auth-header">
+            <div class="auth-logo">
+                <i class="fas fa-cube"></i> DocQuery.ai
+            </div>
+            <div class="auth-title" id="auth-title">Sign In</div>
+            <div class="auth-subtitle" id="auth-subtitle">to continue to DocQuery.ai</div>
+        </div>
+
+        <!-- Form Container -->
+        <div class="auth-forms">
+            <!-- Login Form -->
+            <form id="login-form" class="auth-form visible">
+                <div class="form-group">
+                    <label for="login-email">Email address</label>
+                    <input type="email" id="login-email" name="email" required placeholder="Enter your email">
+                </div>
+                <div class="form-group">
+                    <label for="login-password">Password</label>
+                    <div class="password-wrapper">
+                        <input type="password" id="login-password" name="password" required
+                            placeholder="Enter your password">
+                        <i class="fas fa-eye toggle-password"></i>
+                    </div>
+                </div>
+
+                <div class="form-group" style="text-align: right; margin-top: -10px; margin-bottom: 20px;">
+                    <a href="#" id="forgot-password-link"
+                        style="font-size: 0.85rem; color: var(--accent-neon); text-decoration: none;">Forgot
+                        password?</a>
+                </div>
+
+                <button type="submit" class="auth-submit-btn">
+                    <span class="btn-text">Continue</span>
+                    <span class="btn-loader"></span>
+                </button>
+
+                <div class="auth-footer-link">
+                    No account? <a href="#" id="switch-to-signup">Sign up</a>
+                </div>
+            </form>
+
+            <!-- Signup Form -->
+            <form id="signup-form" class="auth-form">
+                <div class="form-group">
+                    <label for="signup-email">Email address</label>
+                    <input type="email" id="signup-email" name="email" required placeholder="Enter your email">
+                </div>
+                <div class="form-group">
+                    <label for="signup-username">Username (Optional)</label>
+                    <input type="text" id="signup-username" name="username" placeholder="Choose a username">
+                </div>
+                <div class="form-group">
+                    <label for="signup-password">Password</label>
+                    <div class="password-wrapper">
+                        <input type="password" id="signup-password" name="password" required
+                            placeholder="Create a password">
+                        <i class="fas fa-eye toggle-password"></i>
+                    </div>
+                    <!-- Password Strength Feedback -->
+                    <div id="signup-password-strength" class="password-strength-feedback" style="display:none;">
+                        <div class="strength-item" data-rule="length">8+ characters</div>
+                        <div class="strength-item" data-rule="upper">Uppercase letter</div>
+                        <div class="strength-item" data-rule="lower">Lowercase letter</div>
+                        <div class="strength-item" data-rule="number">Number</div>
+                        <div class="strength-item" data-rule="symbol">Special symbol (!@#$%)</div>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label for="signup-confirm">Confirm Password</label>
+                    <input type="password" id="signup-confirm" name="confirm_password" required
+                        placeholder="Confirm password">
+                </div>
+
+                <button type="submit" class="auth-submit-btn">
+                    <span class="btn-text">Create account</span>
+                    <span class="btn-loader"></span>
+                </button>
+
+                <div class="auth-footer-link">
+                    Already have an account? <a href="#" id="switch-to-login">Sign in</a>
+                </div>
+            </form>
+
+            <!-- Forgot Password Form -->
+            <form id="forgot-password-form" class="auth-form">
+                <div class="form-group">
+                    <label for="forgot-email">Email address</label>
+                    <input type="email" id="forgot-email" name="email" required placeholder="Enter your email">
+                </div>
+                <div class="form-group">
+                    <label for="forgot-password">New Password</label>
+                    <div class="password-wrapper">
+                        <input type="password" id="forgot-password" name="password" required placeholder="New password">
+                        <i class="fas fa-eye toggle-password"></i>
+                    </div>
+                    <!-- Password Strength Feedback -->
+                    <div id="forgot-password-strength" class="password-strength-feedback" style="display:none;">
+                        <div class="strength-item" data-rule="length">8+ characters</div>
+                        <div class="strength-item" data-rule="upper">Uppercase letter</div>
+                        <div class="strength-item" data-rule="lower">Lowercase letter</div>
+                        <div class="strength-item" data-rule="number">Number</div>
+                        <div class="strength-item" data-rule="symbol">Special symbol (!@#$%)</div>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label for="forgot-confirm">Confirm Password</label>
+                    <input type="password" id="forgot-confirm" name="confirm_password" required
+                        placeholder="Confirm new password">
+                </div>
+
+                <div class="auth-info-text"
+                    style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 16px; line-height: 1.5;">
+                    Enter your email and new password to reset it directly (Local Dev Mode).
+                </div>
+
+                <button type="submit" class="auth-submit-btn">
+                    <span class="btn-text">Reset Password</span>
+                    <span class="btn-loader"></span>
+                </button>
+
+                <div class="auth-footer-link">
+                    <a href="#" id="back-to-login">Back to Sign In</a>
+                </div>
+            </form>
+        </div>
+
+        <!-- Error Message Toast -->
+        <div id="auth-error-msg" class="auth-error-msg"></div>
+    </div>
+</div>

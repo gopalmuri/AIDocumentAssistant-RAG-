@@ -1,0 +1,90 @@
+{% load static %}
+<nav class="dash-nav">
+  <div class="logo">
+    <h2 style="font-family: 'Space Grotesk'; font-weight: 700; color: var(--text-primary);">
+      <i class="fas fa-layer-group" style="color: var(--accent-primary);"></i> DocQuery
+    </h2>
+  </div>
+
+  <div class="nav-links">
+    {% with url_name=request.resolver_match.url_name %}
+    <a href="{% url 'dashboard' %}" class="nav-item {% if url_name == 'dashboard' %}active{% endif %}">Documents</a>
+    <a href="{% url 'chat_page' %}" class="nav-item {% if url_name == 'chat_page' %}active{% endif %}">AI Chat</a>
+    <a href="{% url 'history_page' %}" class="nav-item {% if url_name == 'history_page' %}active{% endif %}">History</a>
+    <a href="{% url 'favorites_page' %}"
+      class="nav-item {% if url_name == 'favorites_page' %}active{% endif %}">Favorites</a>
+
+    <!-- Theme Toggle -->
+    <button id="themeToggle" class="nav-item" style="background:none; border:none; cursor:pointer;"
+      title="Toggle Theme">
+      <i class="fas fa-moon"></i>
+    </button>
+    {% endwith %}
+
+    <!-- Account Dropdown -->
+    <div style="position: relative;">
+      <div class="user-avatar" id="accountTrigger" style="overflow: hidden; cursor: pointer;"
+        title="Profile Synced • Click for Menu">
+        <div id="navAvatarInitials"
+          style="width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; font-weight: 600;">
+          {{ request.user.first_name|first|default:request.user.username|first|upper }}
+        </div>
+        <img id="navAvatarImg" src="" alt="Avatar" style="width: 100%; height: 100%; object-fit: cover; display: none;">
+
+        <!-- Sync Status Dot -->
+        <div
+          style="position: absolute; bottom: 0; right: 0; width: 10px; height: 10px; background: #22c55e; border: 2px solid var(--bg-app); border-radius: 50%;"
+          title="Online & Synced"></div>
+      </div>
+
+      <div class="account-dropdown" id="accountDropdown">
+        <div style="padding: 16px; border-bottom: 1px solid var(--border-light);">
+          <div style="font-weight: 600; color: var(--text-primary); font-size: 0.95rem; margin-bottom: 2px;">
+            {{ request.user.first_name }} {{ request.user.last_name }}
+          </div>
+          <p
+            style="font-size: 0.85rem; font-weight: 400; color: var(--text-secondary); margin: 0; overflow: hidden; text-overflow: ellipsis;">
+            {{ request.user.email }}
+          </p>
+        </div>
+
+        <div style="padding: 8px;">
+          <a href="{% url 'profile_page' %}"><i class="far fa-user"></i> Profile Settings</a>
+          <a href="{% url 'password_change_page' %}"><i class="fas fa-key"></i> Change Password</a>
+        </div>
+
+        <div class="divider"></div>
+
+        <div style="padding: 8px;">
+          <a href="#" id="logoutBtn" style="color: #ef4444;"><i class="fas fa-sign-out-alt"></i> Logout</a>
+        </div>
+      </div>
+    </div>
+  </div>
+
+<script>
+  // Load user profile photo in navbar
+  (function() {
+    const navAvatarImg = document.getElementById('navAvatarImg');
+    const navAvatarInitials = document.getElementById('navAvatarInitials');
+    
+    if (navAvatarImg && navAvatarInitials) {
+      // Fetch user profile data
+      fetch('/api/auth/me/')
+        .then(res => res.json())
+        .then(data => {
+          if (data.profile_photo) {
+            // Show profile photo
+            navAvatarImg.src = data.profile_photo;
+            navAvatarImg.style.display = 'block';
+            navAvatarInitials.style.display = 'none';
+          }
+        })
+        .catch(err => {
+          console.log('Profile photo not available, showing initials');
+          // Keep showing initials on error
+        });
+    }
+  })();
+</script>
+</nav>

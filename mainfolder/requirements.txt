@@ -1,0 +1,17 @@
+requests
+PyMuPDF
+nltk
+sentence-transformers
+chromadb
+scikit-learn
+numpy
+pdfplumber
+Django
+spacy
+mysqlclient
+mysql-connector-python
+google-genai>=1.0.0
+gunicorn
+psycopg2-binary
+dj-database-url
+whitenoise

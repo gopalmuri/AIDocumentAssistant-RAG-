@@ -1,0 +1,752 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>History - AI Document Assistant</title>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;600;700&family=Inter:wght@300;400;500;600&display=swap"
+        rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="{% static 'ragapp/style.css' %}?v=36">
+    <link rel="stylesheet" href="{% static 'ragapp/dashboard_theme.css' %}?v=5">
+    <script>
+        // Init Theme Immediately
+        (function () {
+            const savedTheme = localStorage.getItem('theme') || 'light';
+            document.documentElement.setAttribute('data-theme', savedTheme);
+        })();
+    </script>
+    <style>
+        /* Hide Scrollbar Globally */
+        ::-webkit-scrollbar {
+            display: none;
+        }
+
+        * {
+            scrollbar-width: none;
+            -ms-overflow-style: none;
+        }
+
+        /* History Specific Toolbar */
+        .history-toolbar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 24px;
+            gap: 16px;
+            flex-wrap: wrap;
+        }
+
+        .search-wrapper {
+            position: relative;
+            flex: 1;
+            min-width: 280px;
+        }
+
+        .search-wrapper i {
+            position: absolute;
+            left: 14px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: var(--text-muted);
+        }
+
+        .history-search-input {
+            width: 100%;
+            padding: 12px 12px 12px 40px;
+            border-radius: 12px;
+            border: 1px solid var(--border-light);
+            background: var(--input-bg);
+            color: var(--text-primary);
+            font-family: 'Inter', sans-serif;
+            outline: none;
+            transition: all 0.2s;
+        }
+
+        .history-search-input:focus {
+            border-color: var(--accent-primary);
+            box-shadow: 0 0 0 3px var(--accent-glow);
+        }
+
+        .toolbar-actions {
+            display: flex;
+            gap: 12px;
+            align-items: center;
+        }
+
+        /* Custom Dropdown for "Super Drag" Style */
+        .custom-dropdown {
+            position: relative;
+            min-width: 160px;
+            font-family: 'Inter', sans-serif;
+        }
+
+        .dropdown-trigger {
+            padding: 10px 16px;
+            border-radius: 12px;
+            background: var(--bg-surface);
+            border: 1px solid var(--border-light);
+            color: var(--text-primary);
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            transition: all 0.2s ease;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.02);
+        }
+
+        .dropdown-trigger:hover {
+            border-color: var(--accent-primary);
+            background: var(--bg-surface-hover);
+            transform: translateY(-1px);
+        }
+
+        .dropdown-trigger span {
+            font-weight: 500;
+            margin-right: 12px;
+        }
+
+        .dropdown-menu {
+            position: absolute;
+            top: 100%;
+            left: 0;
+            width: 100%;
+            margin-top: 8px;
+            background: var(--bg-surface);
+            border: 1px solid var(--border-light);
+            border-radius: 12px;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+            overflow: hidden;
+            opacity: 0;
+            visibility: hidden;
+            transform: translateY(-10px);
+            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+            z-index: 50;
+        }
+
+        .custom-dropdown.active .dropdown-menu {
+            opacity: 1;
+            visibility: visible;
+            transform: translateY(0);
+        }
+
+        .dropdown-item {
+            padding: 10px 16px;
+            cursor: pointer;
+            transition: background 0.15s;
+            color: var(--text-primary);
+            font-size: 0.95rem;
+        }
+
+        .dropdown-item:hover {
+            background: var(--bg-hero);
+            color: var(--accent-primary);
+        }
+
+        .dropdown-item.selected {
+            background: var(--bg-hero);
+            color: var(--accent-primary);
+            font-weight: 600;
+        }
+
+        .btn-outline {
+            padding: 10px 16px;
+            border-radius: 12px;
+            border: 1px solid var(--border-light);
+            background: var(--bg-surface);
+            color: var(--text-primary);
+            cursor: pointer;
+            font-weight: 500;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.02);
+        }
+
+        .btn-outline:hover {
+            background: var(--bg-surface-hover);
+            border-color: var(--accent-primary);
+            color: var(--accent-primary);
+        }
+
+        .btn-danger {
+            background: #EF4444;
+            color: white;
+            border: none;
+        }
+
+        .btn-danger:hover {
+            background: #DC2626;
+        }
+
+        /* Bulk Selection Mode */
+        .doc-card {
+            position: relative;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            overflow: visible;
+            /* Limit overflow for tooltips if needed, but actions might pop out? No, actions are inside. */
+        }
+
+        .doc-card.selected {
+            border-color: var(--accent-primary);
+            background: var(--bg-hero);
+        }
+
+        .selection-checkbox {
+            position: absolute;
+            top: 12px;
+            left: 12px;
+            width: 20px;
+            height: 20px;
+            z-index: 10;
+            cursor: pointer;
+            accent-color: var(--accent-primary);
+            display: none;
+            /* Hidden by default */
+        }
+
+        .bulk-mode .selection-checkbox {
+            display: block;
+        }
+
+        /* Pinning Styling */
+        .doc-card.pinned {
+            border-color: var(--accent-primary);
+            background: linear-gradient(to bottom right, var(--bg-surface), var(--bg-hero));
+        }
+
+        .pin-btn {
+            position: absolute;
+            top: 12px;
+            right: 12px;
+            color: var(--text-muted);
+            background: none;
+            border: none;
+            cursor: pointer;
+            opacity: 0;
+            transition: all 0.2s;
+            z-index: 5;
+            font-size: 14px;
+        }
+
+        .doc-card:hover .pin-btn,
+        .doc-card.pinned .pin-btn {
+            opacity: 1;
+        }
+
+        .doc-card.pinned .pin-btn {
+            color: var(--accent-primary);
+            transform: rotate(45deg);
+            /* Optional flair */
+        }
+
+        .doc-card.pinned .pin-btn:hover {
+            color: var(--accent-glow);
+        }
+
+        /* Hover Actions Reveal */
+        .doc-actions {
+            opacity: 0;
+            transform: translateY(10px);
+            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .doc-card:hover .doc-actions {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        /* Document Indicator */
+        .doc-indicator {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            font-size: 12px;
+            color: var(--text-secondary);
+            margin-left: 8px;
+            padding: 2px 6px;
+            background: var(--bg-app);
+            border-radius: 4px;
+        }
+
+        /* Tooltip behavior */
+        .tooltip-text {
+            position: relative;
+        }
+
+        .tooltip-text:hover::after {
+            content: attr(data-tooltip);
+            position: absolute;
+            bottom: 100%;
+            left: 50%;
+            transform: translateX(-50%);
+            padding: 4px 8px;
+            background: #333;
+            color: white;
+            font-size: 12px;
+            border-radius: 4px;
+            white-space: nowrap;
+            pointer-events: none;
+            margin-bottom: 4px;
+            z-index: 100;
+        }
+
+        .empty-history {
+            text-align: center;
+            padding: 60px 20px;
+            color: var(--text-muted);
+        }
+
+        .empty-history i {
+            font-size: 48px;
+            margin-bottom: 16px;
+            opacity: 0.5;
+        }
+    </style>
+</head>
+
+<body data-theme="light">
+    <!-- Navigation -->
+    {% include "ragapp/components/navbar.html" %}
+
+    <section class="hero-section" style="padding: 40px 0 20px;">
+        <div class="hero-content">
+            <h1 class="hero-title">Search History</h1>
+            <p style="color: var(--text-secondary); margin-top: 8px;">Manage and revisit your past conversations.</p>
+        </div>
+    </section>
+
+    <section class="section-container">
+        <!-- Toolbar -->
+        <div class="history-toolbar">
+            <div class="search-wrapper">
+                <i class="fas fa-search"></i>
+                <input type="text" id="searchInput" class="history-search-input" placeholder="Search conversations...">
+            </div>
+
+            <div class="toolbar-actions">
+                <!-- Custom Dropdown -->
+                <div class="custom-dropdown" id="sortDropdown">
+                    <div class="dropdown-trigger" onclick="toggleDropdown()">
+                        <span id="currentSort">Newest First</span>
+                        <i class="fas fa-chevron-down" style="font-size: 0.8rem; color: var(--text-muted);"></i>
+                    </div>
+                    <div class="dropdown-menu">
+                        <div class="dropdown-item selected" onclick="selectSort('newest', 'Newest First')">Newest First
+                        </div>
+                        <div class="dropdown-item" onclick="selectSort('oldest', 'Oldest First')">Oldest First</div>
+                        <div class="dropdown-item" onclick="selectSort('az', 'A-Z')">A-Z</div>
+                    </div>
+                </div>
+
+                <button id="toggleSelectBtn" class="btn-outline">
+                    <i class="fas fa-check-square"></i> Select
+                </button>
+
+                <button id="bulkDeleteBtn" class="btn-outline btn-danger" style="display: none;">
+                    <i class="fas fa-trash-alt"></i> Delete (<span id="selectedCount">0</span>)
+                </button>
+            </div>
+        </div>
+
+        <!-- History Grid -->
+        <div class="docs-grid" id="historyGrid">
+            <!-- Populated by JS -->
+            <div class="empty-history">
+                <i class="fas fa-spinner fa-spin"></i>
+                <p>Loading history...</p>
+            </div>
+        </div>
+    </section>
+
+
+    <script>
+        // History Page Logic
+        document.addEventListener('DOMContentLoaded', () => {
+            const grid = document.getElementById('historyGrid');
+            const searchInput = document.getElementById('searchInput');
+            // const sortSelect = document.getElementById('sortSelect'); // Removed
+            const toggleSelectBtn = document.getElementById('toggleSelectBtn');
+            const bulkDeleteBtn = document.getElementById('bulkDeleteBtn');
+            const selectedCountSpan = document.getElementById('selectedCount');
+
+            let allConversations = [];
+            let isSelectionMode = false;
+            let selectedIds = new Set();
+            let currentSortValue = 'newest'; // Default
+
+            // Dropdown Logic
+            window.toggleDropdown = function () {
+                document.getElementById('sortDropdown').classList.toggle('active');
+            }
+
+            window.selectSort = function (value, label) {
+                currentSortValue = value;
+                document.getElementById('currentSort').textContent = label;
+                document.getElementById('sortDropdown').classList.remove('active');
+
+                // Update active state in menu
+                document.querySelectorAll('.dropdown-item').forEach(item => {
+                    item.classList.remove('selected');
+                    if (item.textContent === label) item.classList.add('selected');
+                });
+
+                renderHistory();
+            }
+
+            // Close dropdown when clicking outside
+            document.addEventListener('click', (e) => {
+                const dropdown = document.getElementById('sortDropdown');
+                if (dropdown && !dropdown.contains(e.target)) {
+                    dropdown.classList.remove('active');
+                }
+            });
+
+            // Fetch History
+            async function fetchHistory() {
+                try {
+                    const res = await fetch('/conversations/');
+                    const data = await res.json();
+                    allConversations = data.conversations || [];
+                    renderHistory();
+                } catch (error) {
+                    console.error('Failed to fetch history:', error);
+                    grid.innerHTML = `<div class="empty-history"><i class="fas fa-exclamation-circle"></i><p>Failed to load history.</p></div>`;
+                }
+            }
+
+            // Render Grid
+            window.renderHistory = function () {
+                const query = searchInput.value.toLowerCase();
+                const sortBy = currentSortValue;
+
+                // Filter
+                let filtered = allConversations.filter(c =>
+                    (c.title || 'Untitled').toLowerCase().includes(query)
+                );
+
+                // Sort Strategy
+                filtered.sort((a, b) => {
+                    // Pinned always top
+                    if (a.is_pinned !== b.is_pinned) return a.is_pinned ? -1 : 1;
+
+                    // Then by selection (if any) - Optional, but sticking to requested sort
+                    if (sortBy === 'newest') return new Date(b.updated_at) - new Date(a.updated_at);
+                    if (sortBy === 'oldest') return new Date(a.updated_at) - new Date(b.updated_at);
+                    if (sortBy === 'az') return (a.title || '').localeCompare(b.title || '');
+                    return 0;
+                });
+
+                if (filtered.length === 0) {
+                    grid.innerHTML = `
+                        <div class="empty-history">
+                            <i class="fas fa-history"></i>
+                            <p>No conversations found.</p>
+                        </div>
+                    `;
+                    return;
+                }
+
+                // Grouping Logic
+                let html = '';
+                let currentGroup = null;
+                const now = new Date();
+                const todayStr = now.toDateString();
+                const yesterdayStr = new Date(now - 86400000).toDateString();
+
+                filtered.forEach(conv => {
+                    let group = 'Older';
+                    const d = new Date(conv.updated_at);
+
+                    if (conv.is_pinned) {
+                        group = 'Pinned';
+                    } else if (sortBy === 'newest') { // Only group by date if sorting by newest logic roughly holds
+                        if (d.toDateString() === todayStr) group = 'Today';
+                        else if (d.toDateString() === yesterdayStr) group = 'Yesterday';
+                        else if (now - d < 7 * 86400000) group = 'Previous 7 Days';
+                    } else {
+                        group = 'All Conversations'; // Single group for other sorts
+                    }
+
+                    if (group !== currentGroup) {
+                        currentGroup = group;
+                        html += `<div style="grid-column: 1/-1; margin: 24px 0 12px; font-weight: 600; color: var(--text-secondary); font-size: 0.9rem; letter-spacing: 0.5px; text-transform: uppercase; border-bottom: 1px solid var(--border-light); padding-bottom: 8px;">${group}</div>`;
+                    }
+
+                    const exactDate = d.toLocaleString();
+                    const docIndicator = conv.has_documents ?
+                        `<span class="doc-indicator" title="Has documents"><i class="fas fa-paperclip"></i></span>` : '';
+
+                    html += `
+                    <div class="doc-card ${selectedIds.has(conv.id) ? 'selected' : ''} ${conv.is_pinned ? 'pinned' : ''}" 
+                         onclick="toggleCardSelection(${conv.id}, event)">
+                        <input type="checkbox" class="selection-checkbox" 
+                            ${selectedIds.has(conv.id) ? 'checked' : ''} 
+                            readonly>
+                        
+                        <button class="pin-btn" onclick="togglePin(${conv.id}, event)" title="${conv.is_pinned ? 'Unpin' : 'Pin'}">
+                            <i class="fas fa-thumbtack"></i>
+                        </button>
+                        
+                        <div class="doc-icon"><i class="fas fa-comments"></i></div>
+                        <h3 class="doc-title">${escapeHtml(conv.title || 'Untitled Conversation')}</h3>
+                        <div class="doc-meta tooltip-text" data-tooltip="${exactDate}">
+                            <span>${formatDate(conv.updated_at)}</span>
+                            ${docIndicator}
+                        </div>
+                        
+                        <div class="doc-actions" onclick="event.stopPropagation()">
+                            <button class="action-btn" onclick="openChat(${conv.id})" title="Continue Chat"><i class="fas fa-arrow-right"></i></button>
+                            <button class="action-btn" onclick="renameChat(${conv.id}, '${escapeHtml(conv.title || '')}')" title="Rename"><i class="fas fa-pen"></i></button>
+                            <button class="action-btn" onclick="deleteChat(${conv.id})" title="Delete" style="color: #ef4444;"><i class="fas fa-trash"></i></button>
+                        </div>
+                    </div>`;
+                });
+
+                grid.innerHTML = html;
+                // Apply mode class
+                if (isSelectionMode) {
+                    grid.classList.add('bulk-mode');
+                } else {
+                    grid.classList.remove('bulk-mode');
+                }
+            };
+
+            // Helpers
+            function getCookie(name) {
+                let cookieValue = null;
+                if (document.cookie && document.cookie !== '') {
+                    const cookies = document.cookie.split(';');
+                    for (let i = 0; i < cookies.length; i++) {
+                        const cookie = cookies[i].trim();
+                        if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                            cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                            break;
+                        }
+                    }
+                }
+                return cookieValue;
+            }
+
+            function escapeHtml(text) {
+                if (!text) return '';
+                return text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#039;");
+            }
+
+            function formatDate(isoString) {
+                const date = new Date(isoString);
+                const now = new Date();
+                const diff = (now - date) / 1000; // seconds
+
+                if (diff < 60) return 'Just now';
+                if (diff < 3600) return `${Math.floor(diff / 60)}m ago`;
+                if (diff < 86400) return `${Math.floor(diff / 3600)}h ago`;
+                if (diff < 604800) return `${Math.floor(diff / 86400)}d ago`;
+                return date.toLocaleDateString();
+            }
+
+            // Actions
+            window.togglePin = async function (id, event) {
+                event.stopPropagation();
+                // Find current state
+                const conv = allConversations.find(c => c.id === id);
+                if (!conv) return;
+
+                const newPinnedState = !conv.is_pinned;
+
+                try {
+                    const res = await fetch(`/conversations/${id}/`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-CSRFToken': getCookie('csrftoken') // Assuming CSRF token is needed for POST
+                        },
+                        body: JSON.stringify({ is_pinned: newPinnedState })
+                    });
+                    const data = await res.json();
+                    if (data.ok) {
+                        conv.is_pinned = newPinnedState; // Update local
+                        renderHistory();
+                    } else {
+                        console.error("Pin toggle failed:", data.error);
+                        alert("Failed to update pin status: " + (data.error || "Unknown error"));
+                    }
+                } catch (e) {
+                    console.error("Pin toggle failed", e);
+                    alert("Error toggling pin status.");
+                }
+            };
+
+            window.openChat = function (id) {
+                if (isSelectionMode) return; // Prevent nav in select mode
+                sessionStorage.setItem('restore_chat_id', id);
+                window.location.href = '/chat/';
+            };
+
+            window.renameChat = async function (id, currentTitle) {
+                console.log("[HISTORY] Rename clicked for:", id);
+                const newTitle = prompt("Rename conversation:", currentTitle);
+                if (newTitle && newTitle.trim() !== currentTitle) {
+                    try {
+                        // Use PATCH for partial update (standard REST)
+                        const res = await fetch(`/conversations/${id}/`, {
+                            method: 'PATCH',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'X-CSRFToken': getCookie('csrftoken')
+                            },
+                            body: JSON.stringify({ title: newTitle })
+                        });
+
+                        if (res.ok) {
+                            // Update local data
+                            const conv = allConversations.find(c => c.id === id);
+                            if (conv) conv.title = newTitle; // Use set title directly
+                            renderHistory();
+                        } else {
+                            // Fallback to POST if PATCH not allowed
+                            if (res.status === 405) {
+                                console.warn("[HISTORY] PATCH not allowed, retrying with POST...");
+                                const retryRes = await fetch(`/conversations/${id}/`, {
+                                    method: 'POST',
+                                    headers: {
+                                        'Content-Type': 'application/json',
+                                        'X-CSRFToken': getCookie('csrftoken')
+                                    },
+                                    body: JSON.stringify({ title: newTitle })
+                                });
+                                if (retryRes.ok) {
+                                    const conv = allConversations.find(c => c.id === id);
+                                    if (conv) conv.title = newTitle;
+                                    renderHistory();
+                                    return;
+                                }
+                            }
+
+                            const data = await res.json().catch(() => ({}));
+                            console.error("Rename failed:", data);
+                            alert('Failed to rename conversation.');
+                        }
+                    } catch (e) {
+                        console.error("Rename error", e);
+                        alert('Failed to rename conversation.');
+                    }
+                }
+            };
+
+            window.deleteChat = async function (id) {
+                if (confirm("Are you sure you want to delete this conversation?")) {
+                    console.log("[HISTORY] Delete clicked for:", id);
+                    try {
+                        // Strategy 1: Standard DELETE
+                        let res = await fetch(`/conversations/${id}/`, {
+                            method: 'DELETE',
+                            headers: {
+                                'X-CSRFToken': getCookie('csrftoken')
+                            }
+                        });
+
+                        // Strategy 2: Explicit Delete Endpoint (if standard DELETE fails)
+                        if (!res.ok && (res.status === 404 || res.status === 405)) {
+                            console.warn("[HISTORY] Standard DELETE failed, trying POST /delete/...");
+                            res = await fetch(`/conversations/${id}/delete/`, {
+                                method: 'POST',
+                                headers: {
+                                    'X-CSRFToken': getCookie('csrftoken')
+                                }
+                            });
+                        }
+
+                        if (res.ok) {
+                            allConversations = allConversations.filter(c => c.id !== id);
+                            renderHistory();
+                        } else {
+                            const errorData = await res.json().catch(() => ({}));
+                            console.error("Delete failed:", errorData);
+                            alert('Failed to delete conversation.');
+                        }
+                    } catch (e) {
+                        console.error("Delete error", e);
+                        alert('Failed to delete conversation.');
+                    }
+                }
+            };
+
+            // Bulk Actions
+            toggleSelectBtn.onclick = () => {
+                isSelectionMode = !isSelectionMode;
+                toggleSelectBtn.classList.toggle('active', isSelectionMode);
+                toggleSelectBtn.innerHTML = isSelectionMode ? '<i class="fas fa-times"></i> Cancel' : '<i class="fas fa-check-square"></i> Select';
+
+                if (!isSelectionMode) {
+                    selectedIds.clear();
+                    updateBulkUI();
+                }
+                renderHistory();
+            };
+
+            window.toggleCardSelection = function (id, event) {
+                if (!isSelectionMode) {
+                    // Normal Click -> Open Chat if not clicking actions
+                    // (But actions have stopPropagation so we are good)
+                    openChat(id);
+                    return;
+                }
+
+                if (selectedIds.has(id)) {
+                    selectedIds.delete(id);
+                } else {
+                    selectedIds.add(id);
+                }
+                updateBulkUI();
+                renderHistory(); // Re-render to show checkbox state
+            };
+
+            function updateBulkUI() {
+                selectedCountSpan.textContent = selectedIds.size;
+                bulkDeleteBtn.style.display = selectedIds.size > 0 ? 'inline-flex' : 'none';
+            }
+
+            bulkDeleteBtn.onclick = async () => {
+                if (!confirm(`Delete ${selectedIds.size} conversations?`)) return;
+
+                try {
+                    const res = await fetch('/conversations/bulk-delete/', {
+                        method: 'POST',
+                        body: JSON.stringify({ ids: Array.from(selectedIds) })
+                    });
+                    const data = await res.json();
+
+                    if (data.ok) {
+                        // Remove deleted from local
+                        allConversations = allConversations.filter(c => !selectedIds.has(c.id));
+                        selectedIds.clear();
+                        isSelectionMode = false;
+                        toggleSelectBtn.innerHTML = '<i class="fas fa-check-square"></i> Select';
+                        updateBulkUI();
+                        renderHistory();
+                    } else {
+                        alert('Bulk delete failed: ' + (data.error || 'Unknown error'));
+                    }
+                } catch (e) {
+                    alert('Error executing bulk delete.');
+                }
+            };
+
+            // Listeners
+            searchInput.addEventListener('input', renderHistory);
+            // sortSelect.addEventListener('change', renderHistory); // Removed
+
+            // Initial Load
+            fetchHistory();
+        });
+    </script>
+    <script src="{% static 'ragapp/main.js' %}?v=20251217"></script>
+</body>
+
+</html>

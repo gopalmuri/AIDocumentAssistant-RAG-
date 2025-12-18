@@ -1,0 +1,468 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Profile Settings - AI Document Assistant</title>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;600;700&family=Inter:wght@300;400;500;600&display=swap"
+        rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="{% static 'ragapp/style.css' %}?v=36">
+    <link rel="stylesheet" href="{% static 'ragapp/dashboard_theme.css' %}?v=6">
+    <script>
+        (function () {
+            const savedTheme = localStorage.getItem('theme') || 'light';
+            document.documentElement.setAttribute('data-theme', savedTheme);
+        })();
+    </script>
+    <style>
+        .profile-container {
+            max-width: 700px;
+            margin: -40px auto 40px;
+            position: relative;
+            z-index: 10;
+        }
+
+        .profile-card {
+            background: var(--bg-surface);
+            border-radius: 24px;
+            border: 1px solid var(--border-light);
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.15);
+            padding: 40px;
+            margin-bottom: 24px;
+        }
+
+        /* Avatar */
+        .avatar-section {
+            display: flex;
+            justify-content: center;
+            margin-bottom: 32px;
+            position: relative;
+        }
+
+        .avatar-wrapper {
+            position: relative;
+            width: 120px;
+            height: 120px;
+            border-radius: 50%;
+            cursor: pointer;
+        }
+
+        .avatar-image {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            border-radius: 50%;
+            border: 4px solid var(--bg-surface);
+            box-shadow: 0 0 0 1px var(--border-light), 0 10px 20px -5px rgba(0, 0, 0, 0.1);
+        }
+
+        .avatar-initials {
+            width: 100%;
+            height: 100%;
+            border-radius: 50%;
+            background: var(--bg-hero);
+            color: var(--accent-primary);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 40px;
+            font-weight: 700;
+            border: 4px solid var(--bg-surface);
+            box-shadow: 0 0 0 1px var(--border-light), 0 10px 20px -5px rgba(0, 0, 0, 0.1);
+            text-transform: uppercase;
+        }
+
+        .avatar-edit-overlay {
+            position: absolute;
+            inset: 4px;
+            /* match border */
+            border-radius: 50%;
+            background: rgba(0, 0, 0, 0.4);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            opacity: 0;
+            transition: opacity 0.2s;
+            backdrop-filter: blur(2px);
+            color: white;
+            font-size: 24px;
+        }
+
+        .avatar-wrapper:hover .avatar-edit-overlay {
+            opacity: 1;
+        }
+
+        /* Inputs */
+        .form-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            margin-bottom: 24px;
+        }
+
+        .input-group {
+            margin-bottom: 24px;
+        }
+
+        .input-label {
+            display: block;
+            margin-bottom: 8px;
+            color: var(--text-primary);
+            font-weight: 600;
+            font-size: 0.95rem;
+        }
+
+        .input-field {
+            width: 100%;
+            padding: 12px 14px;
+            border: 1px solid var(--border-light);
+            border-radius: 12px;
+            background: var(--input-bg);
+            color: var(--text-primary);
+            font-size: 1rem;
+            transition: all 0.2s;
+            outline: none;
+        }
+
+        .input-field:focus {
+            border-color: var(--accent-primary);
+            box-shadow: 0 0 0 3px var(--accent-glow);
+        }
+
+        .input-field:disabled {
+            background: var(--bg-surface-hover);
+            color: var(--text-secondary);
+            cursor: not-allowed;
+            border-color: var(--border-light);
+            box-shadow: none;
+        }
+
+        .input-helper {
+            margin-top: 6px;
+            font-size: 0.85rem;
+            color: var(--text-muted);
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        /* Section Header */
+        .section-header {
+            margin-bottom: 24px;
+            padding-bottom: 16px;
+            border-bottom: 1px solid var(--border-light);
+        }
+
+        .section-title {
+            font-size: 1.25rem;
+            font-weight: 700;
+            color: var(--text-primary);
+            margin-bottom: 4px;
+        }
+
+        .section-desc {
+            color: var(--text-secondary);
+            font-size: 0.95rem;
+        }
+
+        /* Security Row */
+        .security-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 16px 0;
+        }
+
+        .security-info label {
+            display: block;
+            color: var(--text-primary);
+            font-weight: 600;
+            margin-bottom: 2px;
+        }
+
+        .security-info span {
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+        }
+
+        .btn-primary {
+            width: 100%;
+            padding: 14px;
+            background: linear-gradient(135deg, var(--accent-primary), var(--accent-hover));
+            color: white;
+            border: none;
+            border-radius: 12px;
+            font-weight: 600;
+            font-size: 1.05rem;
+            cursor: pointer;
+            box-shadow: 0 10px 20px -5px var(--accent-glow);
+            transition: all 0.2s;
+        }
+
+        .btn-primary:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 15px 25px -5px var(--accent-glow);
+        }
+
+        .btn-primary:disabled {
+            background: var(--border-light);
+            color: var(--text-muted);
+            cursor: default;
+            box-shadow: none;
+            transform: none;
+        }
+
+        .btn-outline {
+            padding: 8px 16px;
+            border: 1px solid var(--border-light);
+            background: transparent;
+            color: var(--text-primary);
+            border-radius: 8px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s;
+            text-decoration: none;
+        }
+
+        .btn-outline:hover {
+            border-color: var(--accent-primary);
+            color: var(--accent-primary);
+        }
+    </style>
+</head>
+
+<body data-theme="light">
+    <!-- Navigation -->
+    {% include "ragapp/components/navbar.html" %}
+
+    <section class="hero-section" style="padding: 60px 0 80px; position: relative; z-index: 1;">
+        <div class="hero-content">
+            <h1 class="hero-title">
+                <i class="far fa-user"
+                    style="color: var(--accent-primary); margin-right: 12px; font-size: 0.8em; vertical-align: middle;"></i>Profile
+                Settings
+            </h1>
+            <p style="color: var(--text-secondary); margin-top: 8px; font-size: 1.1rem; max-width: 600px;">
+                Manage your personal information and account security.
+            </p>
+        </div>
+    </section>
+
+    <div class="profile-container">
+
+        <!-- Success Check -->
+        <!-- Success Check -->
+        {% if messages %}
+        {% for message in messages %}
+        <div class="alert-message" role="alert"
+            style="background: #ecfdf5; color: #047857; padding: 16px; border-radius: 16px; margin-bottom: 24px; border: 1px solid #a7f3d0; display: flex; align-items: center; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); transition: opacity 0.5s ease-out;">
+            <i class="fas fa-check-circle" style="font-size: 20px; margin-right: 12px;"></i>
+            <span style="font-weight: 500;">{{ message }}</span>
+        </div>
+        {% endfor %}
+        {% endif %}
+
+        <form method="POST" action="{% url 'profile_page' %}" enctype="multipart/form-data" id="profileForm">
+            {% csrf_token %}
+
+            <div class="profile-card">
+                <!-- Avatar Upload -->
+                <div class="avatar-section" style="flex-direction: column; align-items: center; gap: 16px;">
+                    <div class="avatar-wrapper" onclick="document.getElementById('avatarInput').click()">
+                        {% if profile.avatar %}
+                        <img src="{{ profile.avatar.url }}" alt="Profile Avatar" class="avatar-image"
+                            id="avatarPreview">
+                        <div class="avatar-initials" id="avatarInitials" style="display: none;">
+                            {{ user.first_name|first|default:user.username|first }}{{ user.last_name|first }}
+                        </div>
+                        {% else %}
+                        <div class="avatar-initials" id="avatarInitials">
+                            {{ user.first_name|first|default:user.username|first }}{{ user.last_name|first }}
+                        </div>
+                        <img src="" alt="" class="avatar-image" id="avatarPreview" style="display: none;">
+                        {% endif %}
+
+                        <div class="avatar-edit-overlay">
+                            <i class="fas fa-camera"></i>
+                        </div>
+                    </div>
+
+                    <div style="text-align: center;">
+                        <button type="button" class="btn-outline" style="font-size: 0.85rem; padding: 6px 12px;"
+                            onclick="document.getElementById('avatarInput').click()">
+                            Change Photo
+                        </button>
+                        <button type="button" id="removeAvatarBtn" class="btn-outline"
+                            style="font-size: 0.85rem; padding: 6px 12px; color: #ef4444; border-color: #fee2e2; margin-left: 8px; {% if not profile.avatar %}display: none;{% endif %}"
+                            onclick="if(confirm('Are you sure you want to remove your profile photo?')) markAvatarRemoval()">
+                            Remove
+                        </button>
+
+                        <p style="margin-top: 8px; font-size: 0.8rem; color: var(--text-muted);">
+                            Square image recommended. Max 2MB.
+                        </p>
+                        {% if profile.updated_at %}
+                        <p style="margin-top: 4px; font-size: 0.75rem; color: var(--text-secondary); opacity: 0.8;">
+                            <i class="far fa-clock" style="margin-right: 4px;"></i> Last updated: {{
+                            profile.updated_at|date:"M d, Y H:i" }}
+                        </p>
+                        {% endif %}
+                    </div>
+
+                    <!-- Hidden Inputs -->
+                    <input type="file" name="avatar" id="avatarInput" accept="image/*" style="display: none;"
+                        onchange="previewImage(this)">
+                    <input type="hidden" name="remove_avatar" id="removeAvatarInput" value="false">
+                </div>
+
+                <!-- Personal Info -->
+                <div class="form-grid">
+                    <div>
+                        <label class="input-label">First Name</label>
+                        <input type="text" name="first_name" class="input-field" value="{{ user.first_name }}"
+                            placeholder="First Name" data-original="{{ user.first_name }}">
+                    </div>
+                    <div>
+                        <label class="input-label">Last Name</label>
+                        <input type="text" name="last_name" class="input-field" value="{{ user.last_name }}"
+                            placeholder="Last Name" data-original="{{ user.last_name }}">
+                    </div>
+                </div>
+
+                <div class="input-group">
+                    <label class="input-label">Email Address</label>
+                    <div style="position: relative;">
+                        <input type="email" value="{{ user.email }}" class="input-field" disabled>
+                        <i class="fas fa-lock"
+                            style="position: absolute; right: 14px; top: 14px; color: var(--text-muted);"></i>
+                    </div>
+                    <div class="input-helper">
+                        <i class="fas fa-info-circle"></i> Email cannot be changed. Contact support for assistance.
+                    </div>
+                </div>
+
+                <button type="submit" id="saveBtn" class="btn-primary" disabled>
+                    Save Changes
+                </button>
+            </div>
+
+        </form>
+
+        <!-- Account Security Section -->
+        <div class="profile-card">
+            <div class="section-header">
+                <div class="section-title">Account Security</div>
+                <div class="section-desc">Manage your password and security preferences.</div>
+            </div>
+
+            <div class="security-row">
+                <div class="security-info">
+                    <label>Password</label>
+                    <span>Last changed: Never (or unknown)</span>
+                </div>
+                <!-- Link to Password Change -->
+                <a href="{% url 'password_change_page' %}" class="btn-outline">Change Password</a>
+            </div>
+
+            <div style="height: 1px; background: var(--border-light); margin: 8px 0;"></div>
+
+            <div class="security-row">
+                <div class="security-info">
+                    <label>Last Login</label>
+                    <span>{{ last_login|date:"M d, Y, h:i A" }} • via AI Document Assistant</span>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <script src="{% static 'ragapp/main.js' %}?v=20251217"></script>
+    <script>
+        // Auto-dismiss alerts
+        document.addEventListener('DOMContentLoaded', () => {
+            const alerts = document.querySelectorAll('.alert-message');
+            if (alerts.length > 0) {
+                setTimeout(() => {
+                    alerts.forEach(alert => {
+                        alert.style.opacity = '0';
+                        setTimeout(() => alert.remove(), 500); // Wait for transition
+                    });
+                }, 3000); // 3 seconds visible
+            }
+        });
+
+        // Preview Image & Enable Save
+        function previewImage(input) {
+            if (input.files && input.files[0]) {
+                const reader = new FileReader();
+                reader.onload = function (e) {
+                    const img = document.getElementById('avatarPreview');
+                    const initials = document.getElementById('avatarInitials');
+                    const removeBtn = document.getElementById('removeAvatarBtn');
+
+                    img.src = e.target.result;
+                    img.style.display = 'block';
+                    if (initials) initials.style.display = 'none';
+                    if (removeBtn) removeBtn.style.display = 'inline-block';
+
+                    document.getElementById('removeAvatarInput').value = 'false'; // Reset removal
+
+                    checkChanges();
+                }
+                reader.readAsDataURL(input.files[0]);
+            }
+        }
+
+        function markAvatarRemoval() {
+            const img = document.getElementById('avatarPreview');
+            const initials = document.getElementById('avatarInitials');
+            const fileInput = document.getElementById('avatarInput');
+            const removeInput = document.getElementById('removeAvatarInput');
+            const removeBtn = document.getElementById('removeAvatarBtn');
+
+            // Visual Reset
+            img.src = '';
+            img.style.display = 'none';
+            if (initials) initials.style.display = 'flex';
+
+            // Logic
+            fileInput.value = ''; // Clear file selection
+            removeInput.value = 'true';
+            removeBtn.style.display = 'none';
+
+            checkChanges();
+        }
+
+        // Change Detection
+        const form = document.getElementById('profileForm');
+        const saveBtn = document.getElementById('saveBtn');
+        const inputs = form.querySelectorAll('input[type="text"]');
+        const fileInput = document.getElementById('avatarInput');
+        const removeInput = document.getElementById('removeAvatarInput');
+
+        function checkChanges() {
+            let hasChanges = false;
+
+            inputs.forEach(input => {
+                if (input.value.trim() !== input.dataset.original) {
+                    hasChanges = true;
+                }
+            });
+
+            if (fileInput.files.length > 0) hasChanges = true;
+            if (removeInput.value === 'true') hasChanges = true;
+
+            saveBtn.disabled = !hasChanges;
+        }
+
+        inputs.forEach(input => input.addEventListener('input', checkChanges));
+
+        // Initial check ?? No, disabled by default.
+    </script>
+</body>
+
+</html>

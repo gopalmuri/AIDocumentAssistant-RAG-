@@ -1,0 +1,2612 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    {% load static %}
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DocQuery.ai - Intelligent Document Analysis</title>
+    <!-- Fonts: Space Grotesk for Headers, Inter for Body, JetBrains Mono for Code -->
+    <link
+        href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=Inter:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500&display=swap"
+        rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <!-- Clerk SDK -->
+    <script async crossorigin="anonymous"
+        data-clerk-publishable-key="pk_test_YnVyc3RpbmctamF3ZmlzaC03OS5jbGVyay5hY2NvdW50cy5kZXYk"
+        src="https://bursting-jawfish-79.clerk.accounts.dev/npm/@clerk/clerk-js@latest/dist/clerk.browser.js"
+        type="text/javascript"></script>
+    <style>
+        :root {
+            --bg-deep: #0F1319;
+            --bg-surface: #151920;
+            --bg-item: #1A1F26;
+            --border-primary: #2D3748;
+            --accent-neon: #FF7B00;
+            --accent-glow: rgba(255, 123, 0, 0.4);
+            --text-main: #FFFFFF;
+            --text-muted: #94A3B8;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            cursor: auto !important;
+            /* Use default cursor */
+        }
+
+        body {
+            background-color: var(--bg-deep);
+            font-family: 'Inter', sans-serif;
+            color: var(--text-main);
+            overflow-x: hidden;
+            overflow-y: auto;
+            line-height: 1.6;
+        }
+
+        h1,
+        h2,
+        h3,
+        h4,
+        .brand-font {
+            font-family: 'Space Grotesk', sans-serif;
+            letter-spacing: -0.5px;
+        }
+
+        /* Custom Cursor - DISABLED */
+        #cursor-glow {
+            display: none !important;
+        }
+
+        #cursor-dot {
+            display: none !important;
+        }
+
+        body:hover #cursor-dot {
+            display: none !important;
+        }
+
+        body:active #cursor-dot {
+            display: none !important;
+        }
+
+        /* Pointer cursor for clickable elements */
+        a,
+        button,
+        [role="button"],
+        .clickable,
+        input[type="submit"],
+        input[type="button"],
+        select,
+        [onclick],
+        .nav-btn,
+        .magnetic-trigger,
+        .suggestion-chip,
+        .faq-header {
+            cursor: pointer !important;
+        }
+
+        /* Page Loader */
+        #page-loader {
+            position: fixed;
+            inset: 0;
+            background: var(--bg-deep);
+            z-index: 2000;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: opacity 0.8s ease, visibility 0.8s;
+        }
+
+        .loader-logo {
+            font-size: 40px;
+            font-family: 'Space Grotesk';
+            font-weight: 700;
+            color: #fff;
+            opacity: 0;
+            transform: scale(0.8);
+            animation: loadLogo 1s forwards;
+        }
+
+        .loader-logo i {
+            color: var(--accent-neon);
+        }
+
+        @keyframes loadLogo {
+            to {
+                opacity: 1;
+                transform: scale(1);
+            }
+        }
+
+        /* Animated Background Canvas */
+        #bg-canvas {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: -1;
+            opacity: 0.2;
+            pointer-events: none;
+        }
+
+        /* Navbar */
+        .landing-nav {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 80px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 5%;
+            background: rgba(15, 19, 25, 0.6);
+            backdrop-filter: blur(16px);
+            z-index: 1000;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+            transition: all 0.3s ease;
+        }
+
+        .landing-logo {
+            font-size: 26px;
+            font-weight: 700;
+            color: #fff;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .landing-logo i {
+            color: var(--accent-neon);
+            text-shadow: 0 0 10px var(--accent-neon);
+        }
+
+        .nav-btn {
+            padding: 10px 24px;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 600;
+            text-decoration: none;
+            transition: all 0.3s ease;
+            border: 1px solid transparent;
+        }
+
+        .btn-ghost {
+            color: #cbd5e1;
+        }
+
+        .btn-ghost:hover {
+            color: #fff;
+            background: rgba(255, 255, 255, 0.05);
+        }
+
+        .btn-accent {
+            background: linear-gradient(135deg, #FF7B00 0%, #ff5e00 100%);
+            color: #fff;
+            box-shadow: 0 4px 15px rgba(255, 123, 0, 0.3);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .btn-accent:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 25px rgba(255, 123, 0, 0.5);
+            border-color: #fff;
+        }
+
+        /* Hero Section */
+        .hero-section {
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            padding: 140px 20px 80px;
+            position: relative;
+        }
+
+        .hero-bg-glow {
+            position: absolute;
+            width: 600px;
+            height: 600px;
+            background: radial-gradient(circle, rgba(255, 123, 0, 0.08) 0%, transparent 70%);
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            z-index: -1;
+            animation: rotateGlow 20s linear infinite;
+        }
+
+        .hero-title {
+            font-size: 76px;
+            font-weight: 700;
+            line-height: 1.2;
+            margin-bottom: 24px;
+            letter-spacing: -2px;
+            display: block;
+            position: relative;
+            max-width: 850px;
+            margin-left: auto;
+            margin-right: auto;
+            word-wrap: break-word;
+            text-align: center;
+        }
+
+        .hero-char {
+            display: inline-block;
+            opacity: 0;
+            transform: translateY(30px) rotateX(20deg);
+            transition: all 0.6s cubic-bezier(0.2, 0.8, 0.2, 1);
+        }
+
+        .hero-char.visible {
+            opacity: 1;
+            transform: translateY(0) rotateX(0);
+            color: #fff;
+        }
+
+        .hero-char.visible:hover {
+            color: var(--accent-neon);
+            text-shadow: 0 0 20px var(--accent-neon);
+            transform: translateY(-5px) scale(1.1);
+            transition: 0.2s;
+        }
+
+        .hero-micro-line {
+            font-size: 16px;
+            color: var(--accent-neon);
+            font-weight: 500;
+            max-width: 600px;
+            margin: 20px auto 30px;
+            opacity: 0;
+            animation: fadeInUp 0.8s forwards 1s;
+            text-align: center;
+            letter-spacing: 0.5px;
+        }
+
+        .hero-subtitle {
+            font-size: 20px;
+            color: var(--text-muted);
+            max-width: 800px;
+            margin: 0 auto 40px;
+            line-height: 1.6;
+            height: auto;
+            min-height: 32px;
+            opacity: 0;
+            animation: fadeInUp 0.8s forwards 1.2s;
+            text-align: center;
+        }
+
+        .typewriter-cursor {
+            display: inline-block;
+            width: 2px;
+            height: 1.2em;
+            background: var(--accent-neon);
+            animation: blink 1s infinite;
+            vertical-align: bottom;
+        }
+
+        .hero-cta {
+            opacity: 0;
+            animation: fadeInUp 0.8s forwards 1.4s;
+            display: flex;
+            gap: 20px;
+        }
+
+        /* Trust Indicators */
+        .trust-section {
+            margin-top: 100px;
+            opacity: 0;
+            animation: fadeInUp 0.8s forwards 1.6s;
+        }
+
+        .trust-title {
+            font-size: 11px;
+            color: #64748B;
+            text-transform: uppercase;
+            letter-spacing: 3px;
+            margin-bottom: 24px;
+            font-weight: 600;
+        }
+
+        .logo-strip {
+            display: flex;
+            gap: 50px;
+            justify-content: center;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+
+        .trust-logo {
+            height: 45px;
+            opacity: 0.6;
+            filter: grayscale(100%);
+            transition: 0.5s;
+            cursor: none;
+        }
+
+        /* mouse handled by custom cursor */
+        .trust-logo:hover {
+            opacity: 1;
+            filter: grayscale(0%) drop-shadow(0 0 8px rgba(255, 255, 255, 0.3));
+            transform: scale(1.05);
+        }
+
+        /* Scrolling Marquee */
+        .marquee-section {
+            padding: 40px 0;
+            background: linear-gradient(90deg, rgba(15, 19, 25, 0) 0%, rgba(26, 31, 38, 0.5) 50%, rgba(15, 19, 25, 0) 100%);
+            border-top: 1px solid rgba(255, 255, 255, 0.03);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.03);
+            margin-top: 60px;
+            overflow: hidden;
+            white-space: nowrap;
+            position: relative;
+        }
+
+        .marquee-content {
+            display: inline-block;
+            animation: scrollMarquee 30s linear infinite;
+        }
+
+        .marquee-item {
+            display: inline-flex;
+            align-items: center;
+            gap: 10px;
+            margin: 0 40px;
+            font-family: 'Space Grotesk';
+            font-size: 18px;
+            color: var(--text-muted);
+            font-weight: 500;
+        }
+
+        .marquee-item i {
+            color: var(--accent-neon);
+            animation: pulse 2s infinite;
+        }
+
+        .marquee-item span {
+            color: #fff;
+            text-shadow: 0 0 10px rgba(255, 255, 255, 0.1);
+        }
+
+        @keyframes scrollMarquee {
+            from {
+                transform: translateX(0);
+            }
+
+            to {
+                transform: translateX(-50%);
+            }
+        }
+
+        /* General Section */
+        .section-padding {
+            padding: 140px 5%;
+            position: relative;
+        }
+
+        .section-title {
+            font-size: 48px;
+            font-weight: 700;
+            text-align: center;
+            margin-bottom: 80px;
+            letter-spacing: -1px;
+        }
+
+        .section-title span {
+            background: linear-gradient(135deg, #FF7B00 0%, #FFB066 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            position: relative;
+        }
+
+        /* Features */
+        .features-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(340px, 1fr));
+            gap: 40px;
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .feature-card {
+            background: rgba(26, 31, 38, 0.4);
+            border: 1px solid var(--border-primary);
+            padding: 40px;
+            border-radius: 16px;
+            transition: 0.4s cubic-bezier(0.2, 0.8, 0.2, 1);
+            opacity: 0;
+            transform: translateY(40px);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .feature-card::before {
+            content: '';
+            position: absolute;
+            inset: 0;
+            border-radius: 16px;
+            padding: 2px;
+            background: linear-gradient(45deg, transparent, rgba(255, 123, 0, 0.3), transparent);
+            -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+            -webkit-mask-composite: xor;
+            mask-composite: exclude;
+            opacity: 0;
+            transition: 0.4s;
+        }
+
+        .feature-card:hover::before {
+            opacity: 1;
+        }
+
+        .feature-card.visible {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        .feature-card:hover {
+            background: #1A1F26;
+            transform: translateY(-10px);
+            box-shadow: 0 20px 50px rgba(0, 0, 0, 0.5);
+        }
+
+        .feature-icon {
+            font-size: 32px;
+            color: var(--accent-neon);
+            margin-bottom: 24px;
+            transition: 0.4s;
+            display: inline-block;
+        }
+
+        .feature-card:hover .feature-icon {
+            transform: rotateY(180deg) scale(1.1);
+            text-shadow: 0 0 15px var(--accent-neon);
+        }
+
+        .feature-title {
+            font-size: 22px;
+            margin-bottom: 12px;
+            font-weight: 600;
+            color: #fff;
+        }
+
+        /* RAG VISUALIZER */
+        .rag-visualizer {
+            max-width: 1000px;
+            margin: 0 auto;
+            height: 500px;
+            position: relative;
+            overflow: hidden;
+            background: #151920;
+            border: 1px solid var(--border-primary);
+            border-radius: 24px;
+            box-shadow: 0 30px 80px rgba(0, 0, 0, 0.5);
+            background-image:
+                radial-gradient(circle at 50% 50%, rgba(255, 123, 0, 0.03) 0%, transparent 60%),
+                linear-gradient(rgba(255, 255, 255, 0.03) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(255, 255, 255, 0.03) 1px, transparent 1px);
+            background-size: 100% 100%, 50px 50px, 50px 50px;
+            animation: panGrid 60s linear infinite;
+        }
+
+        .rag-scene {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            height: 100%;
+            padding: 0 60px;
+            position: relative;
+            margin-top: 20px;
+        }
+
+        .doc-cluster {
+            position: relative;
+            width: 140px;
+            height: 140px;
+        }
+
+        .rag-doc {
+            width: 50px;
+            height: 64px;
+            background: #232D3F;
+            border: 1px solid #4A5568;
+            border-radius: 8px;
+            position: absolute;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+            color: #CBD5E1;
+            transition: 0.5s;
+            opacity: 0;
+            transform: scale(0.8);
+            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.3);
+        }
+
+        .doc-cluster.active .rag-doc {
+            opacity: 1;
+            transform: scale(1);
+            animation: hoverDoc 4s ease-in-out infinite;
+        }
+
+        .rag-doc:nth-child(1) {
+            top: 0;
+            left: 10px;
+            z-index: 1;
+            animation-delay: 0s;
+        }
+
+        .rag-doc:nth-child(2) {
+            top: 25px;
+            left: 45px;
+            z-index: 2;
+            border-color: #64748B;
+            background: #2D3748;
+            animation-delay: 0.5s;
+        }
+
+        .rag-doc:nth-child(3) {
+            top: 50px;
+            left: 5px;
+            z-index: 3;
+            animation-delay: 1s;
+        }
+
+        .rag-doc.highlight {
+            border-color: var(--accent-neon);
+            box-shadow: 0 0 25px rgba(255, 123, 0, 0.3);
+            z-index: 10;
+            transform: scale(1.1) translateY(-10px);
+        }
+
+        .rag-brain-container {
+            position: relative;
+            width: 120px;
+            height: 120px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .rag-brain {
+            font-size: 56px;
+            color: #4A5568;
+            z-index: 2;
+            transition: 0.5s;
+        }
+
+        .rag-brain-container.active .rag-brain {
+            color: var(--accent-neon);
+            filter: drop-shadow(0 0 25px rgba(255, 123, 0, 0.6));
+            animation: pulse 2s infinite;
+        }
+
+        .brain-ring {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            border: 1px dashed rgba(255, 123, 0, 0.3);
+            border-radius: 50%;
+            opacity: 0;
+        }
+
+        .rag-brain-container.active .brain-ring {
+            opacity: 1;
+            animation: spin 8s linear infinite;
+        }
+
+        .rag-particles {
+            position: absolute;
+            inset: 0;
+            pointer-events: none;
+        }
+
+        .particle {
+            position: absolute;
+            width: 6px;
+            height: 6px;
+            background: var(--accent-neon);
+            border-radius: 50%;
+            box-shadow: 0 0 12px var(--accent-neon);
+            opacity: 0;
+        }
+
+        .output-box {
+            width: 300px;
+            background: rgba(35, 45, 63, 0.95);
+            border: 1px solid var(--border-primary);
+            padding: 24px;
+            border-radius: 16px;
+            font-size: 14px;
+            color: #E2E8F0;
+            opacity: 0;
+            transform: translateX(30px);
+            transition: 0.6s cubic-bezier(0.2, 0.8, 0.2, 1);
+            backdrop-filter: blur(12px);
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.4);
+            position: relative;
+        }
+
+        .output-box.active {
+            opacity: 1;
+            transform: translateX(0);
+        }
+
+        .citation {
+            margin-top: 15px;
+            padding: 8px 12px;
+            background: rgba(255, 123, 0, 0.08);
+            border: 1px solid rgba(255, 123, 0, 0.2);
+            border-radius: 8px;
+            font-size: 12px;
+            color: var(--accent-neon);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            cursor: pointer;
+            transition: 0.3s;
+        }
+
+        .citation:hover {
+            background: rgba(255, 123, 0, 0.15);
+            border-color: var(--accent-neon);
+        }
+
+        .citation-connector {
+            position: absolute;
+            top: 50%;
+            left: -80px;
+            width: 80px;
+            height: 1px;
+            background: linear-gradient(90deg, transparent, var(--accent-neon));
+            opacity: 0;
+        }
+
+        .output-box.active .citation-connector {
+            opacity: 1;
+            transition: 0.5s 1s;
+        }
+
+        .rag-search-overlay {
+            position: absolute;
+            top: 50px;
+            left: 0;
+            right: 0;
+            display: flex;
+            justify-content: center;
+            z-index: 20;
+        }
+
+        .search-input {
+            background: #0F1319;
+            border: 1px solid var(--accent-neon);
+            padding: 14px 30px;
+            border-radius: 40px;
+            color: #fff;
+            font-family: 'JetBrains Mono';
+            font-size: 14px;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.6);
+            width: 0;
+            opacity: 0;
+            overflow: hidden;
+            white-space: nowrap;
+            transition: 0.5s ease;
+        }
+
+        .status-timeline {
+            position: absolute;
+            bottom: 40px;
+            left: 0;
+            right: 0;
+            display: flex;
+            justify-content: center;
+            gap: 60px;
+        }
+
+        .status-dot {
+            width: 10px;
+            height: 10px;
+            background: #2D3748;
+            border-radius: 50%;
+            transition: 0.3s;
+            position: relative;
+            cursor: default;
+        }
+
+        .status-dot::after {
+            content: attr(data-label);
+            position: absolute;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-size: 11px;
+            width: 80px;
+            text-align: center;
+            opacity: 0;
+            color: #64748B;
+            font-weight: 500;
+            transition: 0.3s;
+        }
+
+        .status-dot.active {
+            background: var(--accent-neon);
+            box-shadow: 0 0 15px var(--accent-neon);
+        }
+
+        .status-dot.active::after {
+            opacity: 1;
+            color: var(--accent-neon);
+            transform: translateX(-50%) translateY(0);
+        }
+
+        /* Testimonials */
+        .testimonials-grid {
+            display: flex;
+            justify-content: center;
+            gap: 30px;
+            flex-wrap: wrap;
+            max-width: 1000px;
+            margin: 0 auto;
+        }
+
+        .testimonial-card {
+            background: #1A1F26;
+            border: 1px solid var(--border-primary);
+            padding: 30px;
+            border-radius: 12px;
+            width: 400px;
+            max-width: 100%;
+            transition: 0.3s;
+            position: relative;
+        }
+
+        .testimonial-card:hover {
+            transform: translateY(-5px);
+            border-color: rgba(255, 255, 255, 0.2);
+        }
+
+        .quote-icon {
+            font-size: 32px;
+            color: #2D3748;
+            position: absolute;
+            top: 20px;
+            right: 20px;
+        }
+
+        .user-info {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            margin-top: 20px;
+        }
+
+        .user-avatar {
+            width: 40px;
+            height: 40px;
+            background: #2D3748;
+            border-radius: 50%;
+        }
+
+        /* Pricing */
+        .pricing-grid {
+            display: flex;
+            justify-content: center;
+            gap: 30px;
+            flex-wrap: wrap;
+            margin-top: 60px;
+        }
+
+        .pricing-card {
+            background: rgba(255, 255, 255, 0.02);
+            border: 1px solid var(--border-primary);
+            padding: 40px 30px;
+            border-radius: 16px;
+            text-align: center;
+            width: 300px;
+            transition: 0.3s;
+        }
+
+        .pricing-card:hover {
+            background: rgba(255, 255, 255, 0.04);
+            transform: scale(1.02);
+        }
+
+        .price-badge {
+            display: inline-block;
+            padding: 4px 12px;
+            background: rgba(255, 123, 0, 0.1);
+            color: var(--accent-neon);
+            border-radius: 20px;
+            font-size: 12px;
+            margin-bottom: 20px;
+        }
+
+        /* Mid-Page CTA */
+        .cta-section {
+            text-align: center;
+            padding: 100px 20px;
+            background: radial-gradient(circle at 50% 50%, #1A1F26 0%, #0F1319 60%);
+            border-top: 1px solid rgba(255, 255, 255, 0.05);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        .cta-content {
+            max-width: 600px;
+            margin: 0 auto;
+        }
+
+        .cta-title {
+            font-size: 36px;
+            margin-bottom: 30px;
+        }
+
+        /* Footer Top Strip */
+        .footer-cta-strip {
+            background: linear-gradient(90deg, #0F1319 0%, #1A1F26 50%, #0F1319 100%);
+            padding: 40px 5%;
+            border-top: 1px solid var(--border-primary);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        @media (max-width: 768px) {
+            .footer-cta-strip {
+                flex-direction: column;
+                gap: 20px;
+                text-align: center;
+            }
+        }
+
+        /* FAQ */
+        .faq-grid {
+            max-width: 900px;
+            margin: 0 auto;
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 20px;
+        }
+
+        .faq-card {
+            background: rgba(26, 31, 38, 0.6);
+            border: 1px solid var(--border-primary);
+            border-radius: 12px;
+            overflow: hidden;
+            transition: 0.3s;
+        }
+
+        .faq-card:hover {
+            border-color: rgba(255, 255, 255, 0.2);
+        }
+
+        .faq-card.active {
+            border-color: var(--accent-neon);
+            background: rgba(26, 31, 38, 0.9);
+            box-shadow: 0 0 20px rgba(0, 0, 0, 0.4);
+        }
+
+        .faq-header {
+            padding: 24px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            cursor: pointer;
+        }
+
+        .faq-header h3 {
+            font-size: 16px;
+            font-weight: 500;
+        }
+
+        .faq-icon {
+            transition: transform 0.3s;
+            color: var(--accent-neon);
+        }
+
+        .faq-card.active .faq-icon {
+            transform: rotate(45deg);
+        }
+
+        .faq-body {
+            height: 0;
+            overflow: hidden;
+            transition: height 0.3s ease;
+        }
+
+        .faq-body p {
+            padding: 0 24px 24px;
+            color: var(--text-muted);
+            font-size: 14px;
+        }
+
+        /* Footer */
+        footer {
+            border-top: 1px solid var(--border-primary);
+            padding: 80px 5% 40px;
+            background: #050608;
+            color: var(--text-muted);
+        }
+
+        .footer-content {
+            display: flex;
+            justify-content: space-between;
+            max-width: 1200px;
+            margin: 0 auto 60px;
+            flex-wrap: wrap;
+            gap: 50px;
+        }
+
+        .footer-col h4 {
+            color: #fff;
+            margin-bottom: 24px;
+            font-size: 12px;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+        }
+
+        .footer-col a {
+            display: block;
+            color: var(--text-muted);
+            margin-bottom: 14px;
+            text-decoration: none;
+            transition: 0.2s;
+            font-size: 14px;
+        }
+
+        .footer-col a:hover {
+            color: var(--accent-neon);
+            padding-left: 5px;
+        }
+
+        .social-icons {
+            display: flex;
+            gap: 15px;
+            margin-top: 20px;
+        }
+
+        .social-icon {
+            width: 48px;
+            height: 48px;
+            border-radius: 50%;
+            background: #1A1F26;
+            display: flex !important;
+            align-items: center !important;
+            justify-content: center !important;
+            text-decoration: none;
+            transition: 0.3s;
+            border: 1px solid #2D3748;
+            padding: 0;
+            margin: 0;
+        }
+
+        .social-icon i {
+            font-size: 20px;
+            color: #94A3B8;
+            transition: 0.3s;
+            display: inline-block;
+            line-height: 1;
+            margin: 0;
+            padding: 0;
+        }
+
+        .social-icon:hover {
+            background: var(--accent-neon);
+            border-color: var(--accent-neon);
+            transform: translateY(-3px);
+        }
+
+        .social-icon:hover i {
+            color: #fff;
+        }
+
+        /* Utilities */
+        @keyframes fadeInUp {
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        @keyframes blink {
+            50% {
+                opacity: 0;
+            }
+        }
+
+        @keyframes hoverDoc {
+
+            0%,
+            100% {
+                transform: translateY(0);
+            }
+
+            50% {
+                transform: translateY(-8px);
+            }
+        }
+
+        @keyframes pulse {
+            0% {
+                transform: scale(1);
+            }
+
+            50% {
+                transform: scale(1.1);
+            }
+
+            100% {
+                transform: scale(1);
+            }
+        }
+
+        @keyframes spin {
+            to {
+                transform: rotate(360deg);
+            }
+        }
+
+        @keyframes rotateGlow {
+            from {
+                transform: translate(-50%, -50%) rotate(0deg);
+            }
+
+            to {
+                transform: translate(-50%, -50%) rotate(360deg);
+            }
+        }
+
+        @keyframes panGrid {
+            from {
+                background-position: 0 0, 0 0, 0 0;
+            }
+
+            to {
+                background-position: 0 0, -1000px 500px, -1000px 500px;
+            }
+        }
+
+        /* FIX: Overrides for Clerk to show native cursor */
+        .cl-rootBox,
+        .cl-modal-backdrop,
+        .cl-modal-content,
+        .cl-component,
+        .cl-userButton-popover {
+            cursor: auto !important;
+        }
+
+        .cl-rootBox *,
+        .cl-modal-backdrop *,
+        .cl-modal-content *,
+        .cl-component * {
+            cursor: auto !important;
+        }
+
+        /* --- Custom Auth Modal (Clerk Replica) --- */
+        .auth-modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(15, 19, 25, 0.6);
+            backdrop-filter: blur(8px);
+            -webkit-backdrop-filter: blur(8px);
+            z-index: 9999;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+
+        .auth-modal-overlay.visible {
+            opacity: 1;
+        }
+
+        .auth-modal-card {
+            background: #1A1F26;
+            border: 1px solid var(--border-primary);
+            width: 400px;
+            max-width: 90%;
+            border-radius: 16px;
+            padding: 32px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.4);
+            transform: scale(0.95);
+            transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .auth-modal-overlay.visible .auth-modal-card {
+            transform: scale(1);
+        }
+
+        .auth-close-btn {
+            position: absolute;
+            top: 16px;
+            right: 16px;
+            background: transparent;
+            border: none;
+            color: var(--text-muted);
+            font-size: 24px;
+            cursor: pointer;
+            line-height: 1;
+            z-index: 10;
+        }
+
+        .auth-close-btn:hover {
+            color: var(--text-main);
+        }
+
+        .auth-header {
+            text-align: center;
+            margin-bottom: 24px;
+        }
+
+        .auth-logo {
+            font-size: 1.2rem;
+            font-weight: 600;
+            color: var(--text-main);
+            margin-bottom: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+
+        .auth-logo i {
+            color: var(--accent-neon);
+        }
+
+        .auth-title {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: var(--text-main);
+            margin-bottom: 4px;
+        }
+
+        .auth-subtitle {
+            font-size: 0.9rem;
+            color: var(--text-muted);
+        }
+
+        /* Forms */
+        .auth-forms {
+            position: relative;
+            min-height: 200px;
+        }
+
+        .auth-form {
+            display: none;
+            animation: fadeIn 0.3s ease;
+        }
+
+        .auth-form.visible {
+            display: block;
+        }
+
+        .form-group {
+            margin-bottom: 16px;
+        }
+
+        .form-group label {
+            display: block;
+            font-size: 0.85rem;
+            color: var(--text-muted);
+            margin-bottom: 6px;
+            font-weight: 500;
+        }
+
+        .form-group input {
+            width: 100%;
+            padding: 10px 12px;
+            background: var(--bg-deep);
+            border: 1px solid var(--border-primary);
+            border-radius: 8px;
+            color: var(--text-main);
+            font-size: 1rem;
+            outline: none;
+            transition: all 0.2s;
+        }
+
+        .form-group input:focus {
+            border-color: var(--accent-neon);
+            box-shadow: 0 0 0 2px rgba(255, 123, 0, 0.1);
+        }
+
+        .password-wrapper {
+            position: relative;
+        }
+
+        .toggle-password {
+            position: absolute;
+            right: 12px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: var(--text-muted);
+            cursor: pointer;
+            font-size: 0.9rem;
+        }
+
+        .auth-submit-btn {
+            width: 100%;
+            padding: 12px;
+            background: linear-gradient(135deg, var(--accent-neon), #FF5500);
+            border: none;
+            border-radius: 8px;
+            color: white;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+            margin-top: 8px;
+            position: relative;
+        }
+
+        .auth-submit-btn:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(255, 123, 0, 0.3);
+        }
+
+        .auth-submit-btn:disabled {
+            opacity: 0.7;
+            cursor: not-allowed;
+        }
+
+        .auth-footer-link {
+            text-align: center;
+            margin-top: 20px;
+            font-size: 0.9rem;
+            color: var(--text-muted);
+        }
+
+        .auth-footer-link a {
+            color: var(--accent-neon);
+            text-decoration: none;
+            font-weight: 600;
+        }
+
+        .auth-footer-link a:hover {
+            text-decoration: underline;
+        }
+
+        /* Error Toast */
+        .auth-error-msg {
+            margin-top: 16px;
+            background: rgba(255, 59, 48, 0.1);
+            color: #ff3b30;
+            padding: 10px;
+            border-radius: 8px;
+            font-size: 0.9rem;
+            text-align: center;
+            display: none;
+            border: 1px solid rgba(255, 59, 48, 0.2);
+        }
+
+        .auth-error-msg.visible {
+            display: block;
+            animation: shake 0.4s cubic-bezier(.36, .07, .19, .97) both;
+        }
+
+        /* Animations */
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(5px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        @keyframes shake {
+
+            10%,
+            90% {
+                transform: translate3d(-1px, 0, 0);
+            }
+
+            20%,
+            80% {
+                transform: translate3d(2px, 0, 0);
+            }
+
+            30%,
+            50%,
+            70% {
+                transform: translate3d(-4px, 0, 0);
+            }
+
+            40%,
+            60% {
+                transform: translate3d(4px, 0, 0);
+            }
+        }
+
+        .btn-loader {
+            display: none;
+            width: 16px;
+            height: 16px;
+            border: 2px solid white;
+            border-bottom-color: transparent;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            margin-top: -8px;
+            margin-left: -8px;
+        }
+
+        @keyframes spin {
+            from {
+                transform: rotate(0deg);
+            }
+
+            to {
+                transform: rotate(360deg);
+            }
+        }
+
+        .auth-submit-btn.loading .btn-text {
+            visibility: hidden;
+        }
+
+        .auth-submit-btn.loading .btn-loader {
+            display: block;
+        }
+
+        /* --- Mobile Responsiveness --- */
+        @media (max-width: 768px) {
+
+            /* Navbar */
+            .landing-nav {
+                height: auto;
+                padding: 15px 5%;
+                flex-direction: column;
+                gap: 15px;
+                background: rgba(15, 19, 25, 0.95);
+            }
+
+            .desktop-menu {
+                gap: 15px !important;
+                font-size: 13px !important;
+                flex-wrap: wrap;
+                justify-content: center;
+            }
+
+            /* End Navbar */
+
+            /* Typography & Spacing */
+            .section-padding {
+                padding: 80px 5%;
+            }
+
+            .section-title {
+                font-size: 32px;
+                margin-bottom: 40px;
+            }
+
+            .hero-section {
+                padding-top: 140px;
+                /* Space for stacked nav */
+                min-height: auto;
+            }
+
+            .hero-title {
+                font-size: 42px;
+                letter-spacing: -1px;
+            }
+
+            .hero-micro-line,
+            .hero-subtitle {
+                font-size: 16px;
+                padding: 0 20px;
+            }
+
+            .hero-cta {
+                flex-direction: column;
+                width: 100%;
+                padding: 0 20px;
+            }
+
+            .hero-cta .nav-btn {
+                width: 100%;
+                text-align: center;
+            }
+
+            /* Grids */
+            .features-grid {
+                grid-template-columns: 1fr;
+                gap: 20px;
+            }
+
+            .testimonials-grid {
+                flex-direction: column;
+            }
+
+            .testimonial-card,
+            .pricing-card {
+                width: 100%;
+            }
+
+            /* RAG Visualizer Fixes */
+            .rag-visualizer {
+                transform: scale(0.7);
+                margin: -50px 0;
+                /* Compensation for scale gap */
+            }
+
+            .rag-search-overlay {
+                width: 90%;
+                left: 5%;
+            }
+
+            .search-input {
+                width: 100%;
+                font-size: 12px;
+                padding: 12px 20px;
+            }
+
+            .rag-brain-container {
+                transform: scale(0.8);
+            }
+
+            .output-box {
+                width: 260px;
+                right: 0;
+                left: 0;
+                margin: 20px auto 0;
+                transform: none !important;
+                /* Force center */
+                position: relative;
+            }
+
+            /* Marquee */
+            .marquee-section {
+                margin-top: 40px;
+                padding: 20px 0;
+            }
+
+            .trust-section {
+                margin-top: 60px;
+            }
+
+            .logo-strip {
+                gap: 30px;
+            }
+
+            .trust-logo {
+                height: 30px;
+            }
+
+            /* Comparison Section */
+            #comparison .features-grid {
+                grid-template-columns: 1fr !important;
+            }
+        }
+    </style>
+</head>
+
+<body class="landing-page">
+
+    <!-- Preloader -->
+    <div id="page-loader">
+        <div class="loader-logo"><i class="fas fa-cube"></i> DocQuery.ai</div>
+    </div>
+
+    <!-- Custom Cursor -->
+    <div id="cursor-glow"></div>
+    <div id="cursor-dot"></div>
+
+    <!-- Animated Background -->
+    <canvas id="bg-canvas"></canvas>
+
+    <!-- Navigation -->
+    <nav class="landing-nav">
+        <div class="landing-logo">
+            <i class="fas fa-cube"></i> DocQuery<span style="color:var(--accent-neon)">.ai</span>
+        </div>
+        <div class="desktop-menu" style="display:flex; gap:30px; margin:0 auto; font-size:14px; font-weight:500;">
+            <a href="#features" style="color:#cbd5e1; text-decoration:none;">Features</a>
+            <a href="#use-cases" style="color:#cbd5e1; text-decoration:none;">Use Cases</a>
+            <a href="#how-it-works" style="color:#cbd5e1; text-decoration:none;">How It Works</a>
+        </div>
+        <div style="display:flex; gap:12px;">
+            <a href="javascript:void(0)" data-auth="login" class="nav-btn btn-ghost magnetic-trigger">Log In</a>
+            <a href="javascript:void(0)" data-auth="signup" class="nav-btn btn-accent magnetic-trigger">Get Started</a>
+        </div>
+    </nav>
+
+    <!-- Hero Section -->
+    <section class="hero-section">
+        <div class="hero-bg-glow"></div>
+        <h1 class="hero-title" id="hero-text">Your Documents, Intelligent Answers</h1>
+        <div class="hero-micro-line">Upload PDFs. Ask questions. Get verified answers with sources.</div>
+        <div class="hero-subtitle">
+            <span id="typewriter-text"></span><span class="typewriter-cursor"></span>
+        </div>
+        <div class="hero-cta">
+            <a href="javascript:void(0)" data-auth="signup" class="nav-btn btn-accent magnetic-trigger"
+                style="padding: 16px 45px; font-size: 16px;">Start For Free</a>
+            <a href="#how-it-works" class="nav-btn btn-ghost magnetic-trigger"
+                style="padding: 16px 40px; font-size: 16px; border: 1px solid #2D3748;">View Demo</a>
+        </div>
+
+        <!-- Trust Indicators -->
+        <div class="trust-section">
+            <div class="trust-title">Trusted by engineering teams at</div>
+            <div class="logo-strip">
+                <img src="https://upload.wikimedia.org/wikipedia/commons/2/2f/Google_2015_logo.svg" class="trust-logo"
+                    alt="Google">
+                <img src="https://upload.wikimedia.org/wikipedia/commons/5/51/IBM_logo.svg" class="trust-logo"
+                    alt="IBM">
+                <img src="https://upload.wikimedia.org/wikipedia/commons/9/96/Microsoft_logo_%282012%29.svg"
+                    class="trust-logo" alt="Microsoft">
+                <!-- Using Standard Amazon Logo + Invert Class (White/Blue default -> Original on Hover) -->
+                <img src="https://upload.wikimedia.org/wikipedia/commons/a/a9/Amazon_logo.svg"
+                    class="trust-logo invert-on-dark" alt="Amazon" style="margin-top: 10px;">
+                <!-- Heroku (White default -> Original on Hover) -->
+                <img src="https://upload.wikimedia.org/wikipedia/commons/e/ec/Heroku_logo.svg"
+                    class="trust-logo invert-on-dark" alt="Heroku">
+            </div>
+        </div>
+    </section>
+
+    <!-- Marquee Section -->
+    <div class="marquee-section">
+        <div class="marquee-content">
+            <div class="marquee-item"><i class="fas fa-check-circle"></i> <span>Parse PDFs</span></div>
+            <div class="marquee-item"><i class="fas fa-check-circle"></i> <span>Accurate Citations</span></div>
+            <div class="marquee-item"><i class="fas fa-check-circle"></i> <span>Live Retrieval</span></div>
+            <div class="marquee-item"><i class="fas fa-check-circle"></i> <span>Developer Friendly</span></div>
+            <div class="marquee-item"><i class="fas fa-check-circle"></i> <span>Secure Storage</span></div>
+            <div class="marquee-item"><i class="fas fa-check-circle"></i> <span>Instant Answers</span></div>
+            <div class="marquee-item"><i class="fas fa-check-circle"></i> <span>Parse PDFs</span></div>
+            <div class="marquee-item"><i class="fas fa-check-circle"></i> <span>Accurate Citations</span></div>
+            <div class="marquee-item"><i class="fas fa-check-circle"></i> <span>Live Retrieval</span></div>
+        </div>
+    </div>
+
+    <!-- Features Section -->
+    <section class="section-padding" id="features">
+        <h2 class="section-title reveal-text">Why <span>DocQuery?</span></h2>
+        <div class="features-grid">
+            <div class="feature-card reveal-up magnetic-trigger" style="transition-delay: 0.1s">
+                <i class="fas fa-bolt feature-icon"></i>
+                <div class="feature-title">Lightning Fast Retrieval</div>
+                <p style="color:#94a3b8">Utilizing advanced vector databases to fetch precise context from thousands of
+                    pages in milliseconds.</p>
+            </div>
+            <div class="feature-card reveal-up magnetic-trigger" style="transition-delay: 0.2s">
+                <i class="fas fa-code feature-icon"></i>
+                <div class="feature-title">Code Aware Parsing</div>
+                <p style="color:#94a3b8">Specialized parsing for technical documentation, preserving code blocks,
+                    tables, and formatting.</p>
+            </div>
+            <div class="feature-card reveal-up magnetic-trigger" style="transition-delay: 0.3s">
+                <i class="fas fa-shield-alt feature-icon"></i>
+                <div class="feature-title">Enterprise Security</div>
+                <p style="color:#94a3b8">Your data is encrypted at rest and in transit. Private isolation ensures no
+                    data leakage.</p>
+            </div>
+            <div class="feature-card reveal-up magnetic-trigger" style="transition-delay: 0.4s">
+                <i class="fas fa-layer-group feature-icon"></i>
+                <div class="feature-title">Multi-Document Reasoning</div>
+                <p style="color:#94a3b8">Answer complex queries by synthesizing information across multiple PDFs
+                    simultaneously for comprehensive insights.</p>
+            </div>
+            <div class="feature-card reveal-up magnetic-trigger" style="transition-delay: 0.5s">
+                <i class="fas fa-search-plus feature-icon"></i>
+                <div class="feature-title">Semantic Search</div>
+                <p style="color:#94a3b8">Context-aware meaning-based retrieval that understands intent, not just
+                    keywords, for more accurate results.</p>
+            </div>
+            <div class="feature-card reveal-up magnetic-trigger" style="transition-delay: 0.6s">
+                <i class="fas fa-check-double feature-icon"></i>
+                <div class="feature-title">Source-Grounded Answers</div>
+                <p style="color:#94a3b8">Every response is backed by document references to reduce hallucinations and
+                    ensure trustworthy information.</p>
+            </div>
+            <div class="feature-card reveal-up magnetic-trigger" style="transition-delay: 0.7s">
+                <i class="fas fa-highlighter feature-icon"></i>
+                <div class="feature-title">Highlighted Evidence</div>
+                <p style="color:#94a3b8">Automatically highlights the exact text used to generate answers inside
+                    documents for easy verification.</p>
+            </div>
+            <div class="feature-card reveal-up magnetic-trigger" style="transition-delay: 0.8s">
+                <i class="fas fa-plug feature-icon"></i>
+                <div class="feature-title">Developer-First API</div>
+                <p style="color:#94a3b8">Simple REST API for easy integration into any application with comprehensive
+                    documentation and examples.</p>
+            </div>
+            <div class="feature-card reveal-up magnetic-trigger" style="transition-delay: 0.9s">
+                <i class="fas fa-rocket feature-icon"></i>
+                <div class="feature-title">Scalable RAG Pipeline</div>
+                <p style="color:#94a3b8">Designed to scale from a few documents to thousands without performance loss,
+                    built for production workloads.</p>
+            </div>
+        </div>
+    </section>
+
+    <!-- Use Cases Section -->
+    <section class="section-padding" style="background: rgba(255,255,255,0.01);" id="use-cases">
+        <h2 class="section-title reveal-text">Perfect for <span>Every Use Case</span></h2>
+        <div class="features-grid" style="max-width: 1200px; margin: 0 auto;">
+            <div class="feature-card reveal-up magnetic-trigger" style="transition-delay: 0.1s">
+                <i class="fas fa-graduation-cap feature-icon"></i>
+                <div class="feature-title">Students & Researchers</div>
+                <p style="color:#94a3b8">Understand textbooks, research papers, and lecture notes instantly. Get precise
+                    answers with exact page references for citations.</p>
+            </div>
+            <div class="feature-card reveal-up magnetic-trigger" style="transition-delay: 0.2s">
+                <i class="fas fa-briefcase feature-icon"></i>
+                <div class="feature-title">Teams & Businesses</div>
+                <p style="color:#94a3b8">Search internal documents, policies, and reports effortlessly. Onboard faster
+                    and find answers without asking colleagues.</p>
+            </div>
+            <div class="feature-card reveal-up magnetic-trigger" style="transition-delay: 0.3s">
+                <i class="fas fa-code feature-icon"></i>
+                <div class="feature-title">Developers</div>
+                <p style="color:#94a3b8">Query technical documentation, API references, and codebases. Navigate complex
+                    docs with AI-powered semantic search.</p>
+            </div>
+        </div>
+    </section>
+
+
+    <!-- RAG Visualizer Section -->
+    <section class="section-padding" id="how-it-works">
+        <h2 class="section-title reveal-text">How RAG <span>Really Works</span></h2>
+
+        <div class="rag-visualizer reveal-up">
+            <div class="rag-search-overlay">
+                <div class="search-input"><i class="fas fa-search"
+                        style="color:var(--accent-neon); margin-right:10px;"></i><span id="rag-type-target"></span>
+                </div>
+            </div>
+
+            <div class="rag-scene">
+                <!-- Docs -->
+                <div class="doc-cluster">
+                    <div class="rag-doc"><i class="fas fa-file-pdf"></i></div>
+                    <div class="rag-doc"><i class="fas fa-file-code"></i></div>
+                    <div class="rag-doc"><i class="fas fa-file-alt"></i></div>
+                </div>
+
+                <!-- Particles Container -->
+                <div class="rag-particles"></div>
+
+                <!-- Brain -->
+                <div class="rag-brain-container">
+                    <div class="brain-ring"></div>
+                    <i class="fas fa-brain rag-brain"></i>
+                </div>
+
+                <!-- Output -->
+                <div class="output-box">
+                    <strong>AI Response:</strong><br>
+                    <span style="color:#94a3b8">Renewable energy sources significantly reduce carbon emissions by
+                        replacing fossil fuels...</span>
+                    <!-- Connector line logic handled by citation-connector class inside -->
+                    <div class="citation-connector"></div>
+                    <div class="citation"><i class="fas fa-book-open"></i> Report.pdf • Pg 12</div>
+                </div>
+            </div>
+
+            <div class="status-timeline">
+                <div class="status-dot" data-label="Upload Document" id="st-1"></div>
+                <div class="status-dot" data-label="Process & Index" id="st-2"></div>
+                <div class="status-dot" data-label="Retrieve Context" id="st-3"></div>
+                <div class="status-dot" data-label="Generate Answer" id="st-4"></div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Comparison Section -->
+    <section class="section-padding" id="comparison">
+        <h2 class="section-title reveal-text">General AI vs <span>DocQuery</span></h2>
+        <div class="features-grid" style="max-width: 1000px; margin: 0 auto;">
+
+            <!-- ChatGPT / General AI Card -->
+            <div class="feature-card reveal-up" style="border-color: #2D3748; opacity: 0.8; transition-delay: 0.1s;">
+                <div
+                    style="font-size: 24px; color: #cbd5e1; margin-bottom: 20px; font-weight: 700; display:flex; align-items:center; gap:12px;">
+                    <i class="fas fa-robot" style="color: #64748B;"></i> General AI
+                </div>
+                <ul style="list-style: none; padding: 0; color: #94A3B8; font-size: 15px;">
+                    <li style="margin-bottom: 16px; display:flex; gap:12px;">
+                        <i class="fas fa-times-circle" style="color: #ef4444; margin-top:4px;"></i>
+                        <span>Rely on broad, pre-trained public knowledge.</span>
+                    </li>
+                    <li style="margin-bottom: 16px; display:flex; gap:12px;">
+                        <i class="fas fa-times-circle" style="color: #ef4444; margin-top:4px;"></i>
+                        <span>Prone to hallucinations and made-up facts.</span>
+                    </li>
+                    <li style="margin-bottom: 16px; display:flex; gap:12px;">
+                        <i class="fas fa-times-circle" style="color: #ef4444; margin-top:4px;"></i>
+                        <span>No knowledge of your clear internal data.</span>
+                    </li>
+                    <li style="margin-bottom: 0; display:flex; gap:12px;">
+                        <i class="fas fa-times-circle" style="color: #ef4444; margin-top:4px;"></i>
+                        <span>Cannot provide verifiable source citations.</span>
+                    </li>
+                </ul>
+            </div>
+
+            <!-- DocQuery Card -->
+            <div class="feature-card reveal-up"
+                style="border-color: var(--accent-neon); background: rgba(255, 123, 0, 0.03); transform: scale(1.02); box-shadow: 0 20px 50px rgba(255,123,0,0.15); transition-delay: 0.2s;">
+                <div
+                    style="font-size: 24px; color: #fff; margin-bottom: 20px; font-weight: 700; display:flex; align-items:center; gap:12px;">
+                    <i class="fas fa-cube" style="color: var(--accent-neon);"></i> DocQuery
+                </div>
+                <ul style="list-style: none; padding: 0; color: #e2e8f0; font-size: 15px;">
+                    <li style="margin-bottom: 16px; display:flex; gap:12px;">
+                        <i class="fas fa-check-circle" style="color: var(--accent-neon); margin-top:4px;"></i>
+                        <span>Strictly grounded in your uploaded documents.</span>
+                    </li>
+                    <li style="margin-bottom: 16px; display:flex; gap:12px;">
+                        <i class="fas fa-check-circle" style="color: var(--accent-neon); margin-top:4px;"></i>
+                        <span>Zero hallucinations; answers only from context.</span>
+                    </li>
+                    <li style="margin-bottom: 16px; display:flex; gap:12px;">
+                        <i class="fas fa-check-circle" style="color: var(--accent-neon); margin-top:4px;"></i>
+                        <span>Optimized for PDFs, Technical Reports, and APIs.</span>
+                    </li>
+                    <li style="margin-bottom: 0; display:flex; gap:12px;">
+                        <i class="fas fa-check-circle" style="color: var(--accent-neon); margin-top:4px;"></i>
+                        <span>Exact page-level citations for every claim.</span>
+                    </li>
+                </ul>
+            </div>
+
+        </div>
+    </section>
+
+
+
+    <!-- Mid-Page CTA -->
+    <section class="cta-section reveal-up">
+        <div class="cta-content">
+            <h2 class="cta-title">Ready to unlock instant answers from your documents?</h2>
+            <a href="javascript:void(0)" data-auth="signup" class="nav-btn btn-accent magnetic-trigger"
+                style="padding: 18px 50px; font-size: 18px; box-shadow: 0 0 30px rgba(255,123,0,0.4);">Start For
+                Free</a>
+        </div>
+    </section>
+
+    <!-- FAQ Section -->
+    <section class="section-padding" style="background: rgba(255,255,255,0.02);">
+        <h2 class="section-title reveal-text">Frequently Asked <span>Questions</span></h2>
+        <div class="faq-grid reveal-up">
+            <div class="faq-card">
+                <div class="faq-header">
+                    <h3>Is my data used for training?</h3><i class="fas fa-plus faq-icon"></i>
+                </div>
+                <div class="faq-body">
+                    <p>No. Your data is strictly isolated and never used to train our base models or shared with other
+                        users.</p>
+                </div>
+            </div>
+            <div class="faq-card">
+                <div class="faq-header">
+                    <h3>What file formats are supported?</h3><i class="fas fa-plus faq-icon"></i>
+                </div>
+                <div class="faq-body">
+                    <p>We currently support PDF, TXT, and Markdown. DocX and Notion support is coming in Q1 2026.</p>
+                </div>
+            </div>
+            <div class="faq-card">
+                <div class="faq-header">
+                    <h3>Is there a free trial?</h3><i class="fas fa-plus faq-icon"></i>
+                </div>
+                <div class="faq-body">
+                    <p>Yes! The Free Tier allows you to upload up to 5 documents and chat unlimitedly. No credit card
+                        required.</p>
+                </div>
+            </div>
+            <div class="faq-card">
+                <div class="faq-header">
+                    <h3>How does RAG work securely?</h3><i class="fas fa-plus faq-icon"></i>
+                </div>
+                <div class="faq-body">
+                    <p>We chunk your documents locally or in isolated containers, vectorizing them without exposing
+                        raw data to public model APIs until inference time.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Footer CTA Strip -->
+    <div class="footer-cta-strip">
+        <div style="font-size:20px; font-weight:600; color:#fff;">Built for everyone. Powered by AI.</div>
+        <a href="javascript:void(0)" data-auth="signup" class="nav-btn btn-accent magnetic-trigger">Get Started Now</a>
+    </div>
+
+    <footer>
+        <div class="footer-content">
+            <div class="footer-col" style="flex:2">
+                <div class="landing-logo" style="margin-bottom:15px; font-size:22px;">
+                    <i class="fas fa-cube"></i> DocQuery.ai
+                </div>
+                <p style="max-width:300px; font-size:14px; line-height:1.6;">Turning documents into knowledge. The most
+                    advanced RAG platform for technical teams.</p>
+                <div class="social-icons">
+                    <a href="https://github.com/gopalmuri" class="social-icon" target="_blank"><i
+                            class="fab fa-github"></i></a>
+                    <a href="https://linkedin.com/in/gopalmuri" class="social-icon" target="_blank"><i
+                            class="fab fa-linkedin-in"></i></a>
+                    <a href="https://instagram.com/gopalmuri" class="social-icon" target="_blank"><i
+                            class="fab fa-instagram"></i></a>
+                    <a href="mailto:gopalmuri1919@gmail.com" class="social-icon"><i class="fas fa-envelope"></i></a>
+                </div>
+            </div>
+            <div class="footer-col">
+                <h4>Product</h4>
+                <a href="#">Features</a>
+                <a href="#">Pricing</a>
+                <a href="#">Integrations</a>
+                <a href="#">Changelog</a>
+            </div>
+            <div class="footer-col">
+                <h4>Resources</h4>
+                <a href="#">Documentation</a>
+                <a href="#">API Reference</a>
+                <a href="#">Community</a>
+                <a href="#">Blog</a>
+            </div>
+            <div class="footer-col">
+                <h4>Legal</h4>
+                <a href="#">Privacy Policy</a>
+                <a href="#">Terms of Service</a>
+                <a href="#">Security</a>
+            </div>
+        </div>
+        <div
+            style="text-align:center; padding-top:40px; border-top:1px solid rgba(255,255,255,0.05); font-size:13px; opacity:0.5;">
+            &copy; 2025 AI Document Assistant. All rights reserved.
+        </div>
+    </footer>
+
+    <!-- Custom Auth Modal Component -->
+    {% include "ragapp/components/auth_modal.html" %}
+
+    <script>
+        /**
+            // --- Password Strength Logic ---
+            const strengthRules = {
+                length: (val) => val.length >= 8,
+                upper: (val) => /[A-Z]/.test(val),
+                lower: (val) => /[a-z]/.test(val),
+                number: (val) => /[0-9]/.test(val),
+                symbol: (val) => /[!@#$%^&*(),.?":{}|<>]/.test(val)
+            };
+
+            function setupPasswordValidation(inputId, feedbackId, submitBtnSelector) {
+                const input = document.getElementById(inputId);
+                const feedback = document.getElementById(feedbackId);
+                const form = input.closest('form');
+                const btn = form.querySelector('.auth-submit-btn'); // Use class instead of complex selector
+
+                if (!input || !feedback) return;
+
+                input.addEventListener('input', () => {
+                    const val = input.value;
+                    let allValid = true;
+
+                    // Show feedback on input
+                    feedback.style.display = 'grid';
+
+                    // Check each rule
+                    for (const [rule, validator] of Object.entries(strengthRules)) {
+                        const item = feedback.querySelector(`[data-rule="${rule}"]`);
+                        if (item) {
+                            const isValid = validator(val);
+                            if (isValid) {
+                                item.classList.add('valid');
+                                item.classList.remove('invalid');
+                            } else {
+                                item.classList.add('invalid');
+                                item.classList.remove('valid');
+                                allValid = false;
+                            }
+                        }
+                    }
+
+                    // Optional: Check weak patterns basic client-side
+                    if(val.toLowerCase().includes('password') || val.toLowerCase().includes('123456')) {
+                         allValid = false; 
+                         // Could add specific feedback for this, but standard rules usually cover enough entropy
+                    }
+
+                    // Toggle Button State
+                    if (btn) {
+                        btn.disabled = !allValid;
+                        btn.style.opacity = allValid ? '1' : '0.5';
+                        btn.style.cursor = allValid ? 'pointer' : 'not-allowed';
+                    }
+                });
+
+                input.addEventListener('focus', () => {
+                    feedback.style.display = 'grid';
+                });
+
+                // Trigger once to set initial state
+                input.dispatchEvent(new Event('input')); 
+            }
+
+            // Initialize Validation
+            document.addEventListener('DOMContentLoaded', () => {
+                setupPasswordValidation('signup-password', 'signup-password-strength');
+                setupPasswordValidation('forgot-password', 'forgot-password-strength');
+            });
+
+            // --- Auth Modal Logic ---(Clerk Replica) - Inlined for Reliability
+         */
+
+        // Define Global Functions Immediately
+        window.openAuthModal = (view = 'login') => {
+            const modalOverlay = document.getElementById('auth-modal-overlay');
+            const loginForm = document.getElementById('login-form');
+            const signupForm = document.getElementById('signup-form');
+            const forgotForm = document.getElementById('forgot-password-form');
+            const authTitle = document.getElementById('auth-title');
+            // Clear errors when opening
+            const errorMsg = document.getElementById('auth-error-msg');
+            if (errorMsg) {
+                errorMsg.innerText = '';
+                errorMsg.classList.remove('visible');
+            }
+
+            if (modalOverlay) {
+                modalOverlay.style.display = 'flex';
+                // Slight delay for opacity transition
+                setTimeout(() => modalOverlay.classList.add('visible'), 10);
+
+                if (view === 'signup') {
+                    // Show Signup
+                    if (authTitle) authTitle.innerText = "Create account";
+                    if (loginForm) loginForm.classList.remove('visible');
+                    if (signupForm) signupForm.classList.add('visible');
+                    if (forgotForm) forgotForm.classList.remove('visible');
+                } else if (view === 'forgot') {
+                    // Show Forgot Password
+                    if (authTitle) authTitle.innerText = "Reset Password";
+                    if (loginForm) loginForm.classList.remove('visible');
+                    if (signupForm) signupForm.classList.remove('visible');
+                    if (forgotForm) forgotForm.classList.add('visible');
+                } else {
+                    // Show Login (default)
+                    if (authTitle) authTitle.innerText = "Sign In";
+                    if (loginForm) loginForm.classList.add('visible');
+                    if (signupForm) signupForm.classList.remove('visible');
+                    if (forgotForm) forgotForm.classList.remove('visible');
+                }
+            } else {
+                console.error("Auth modal overlay not found!");
+            }
+        };
+
+        window.closeAuthModal = () => {
+            const modalOverlay = document.getElementById('auth-modal-overlay');
+            const loginForm = document.getElementById('login-form');
+            const signupForm = document.getElementById('signup-form');
+            const forgotForm = document.getElementById('forgot-password-form');
+
+            if (modalOverlay) {
+                modalOverlay.classList.remove('visible');
+                setTimeout(() => {
+                    modalOverlay.style.display = 'none';
+                    // Reset forms
+                    if (loginForm) loginForm.reset();
+                    if (signupForm) signupForm.reset();
+                    if (forgotForm) forgotForm.reset();
+                }, 300);
+            }
+        };
+
+        document.addEventListener('DOMContentLoaded', () => {
+            // DOM Elements - Attach Listeners
+            const closeBtn = document.getElementById('auth-close-btn');
+            const switchToSignup = document.getElementById('switch-to-signup');
+            const switchToLogin = document.getElementById('switch-to-login');
+            const forgotLink = document.getElementById('forgot-password-link');
+            const backToLoginVias = [document.getElementById('back-to-login'), document.getElementById('switch-to-login')];
+
+            const modalOverlay = document.getElementById('auth-modal-overlay');
+            const loginForm = document.getElementById('login-form');
+            const signupForm = document.getElementById('signup-form');
+            const forgotForm = document.getElementById('forgot-password-form');
+            const errorMsg = document.getElementById('auth-error-msg');
+
+            // Close Button
+            if (closeBtn) closeBtn.addEventListener('click', window.closeAuthModal);
+
+            // Close on background click
+            if (modalOverlay) {
+                modalOverlay.addEventListener('click', (e) => {
+                    if (e.target === modalOverlay) window.closeAuthModal();
+                });
+            }
+
+            // --- View Switching ---
+            if (switchToSignup) {
+                switchToSignup.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    window.openAuthModal('signup');
+                });
+            }
+
+            if (switchToLogin) {
+                switchToLogin.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    window.openAuthModal('login');
+                });
+            }
+
+            if (forgotLink) {
+                forgotLink.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    window.openAuthModal('forgot');
+                });
+            }
+
+            const backToLogin = document.getElementById('back-to-login');
+            if (backToLogin) {
+                backToLogin.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    window.openAuthModal('login');
+                });
+            }
+
+            // --- Password Toggle ---
+            document.querySelectorAll('.toggle-password').forEach(icon => {
+                icon.addEventListener('click', () => {
+                    const input = icon.previousElementSibling;
+                    if (input.type === 'password') {
+                        input.type = 'text';
+                        icon.classList.remove('fa-eye');
+                        icon.classList.add('fa-eye-slash');
+                    } else {
+                        input.type = 'password';
+                        icon.classList.add('fa-eye');
+                        icon.classList.remove('fa-eye-slash');
+                    }
+                });
+            });
+
+            // --- API Interactions ---
+
+            // Helper: Show Error
+            function showError(msg) {
+                if (errorMsg) {
+                    errorMsg.innerText = msg;
+                    errorMsg.classList.add('visible');
+                    errorMsg.style.color = '#ff3b30';
+                    errorMsg.style.backgroundColor = 'rgba(255, 59, 48, 0.1)';
+                    errorMsg.style.borderColor = 'rgba(255, 59, 48, 0.2)';
+                    const card = document.querySelector('.auth-modal-card');
+                    if (card) {
+                        card.classList.add('shake');
+                        setTimeout(() => card.classList.remove('shake'), 500);
+                    }
+                }
+            }
+
+            function showSuccess(msg) {
+                if (errorMsg) {
+                    errorMsg.innerHTML = msg; // Changed to innerHTML
+                    errorMsg.classList.add('visible');
+                    errorMsg.style.color = '#4cd964';
+                    errorMsg.style.backgroundColor = 'rgba(76, 217, 100, 0.1)';
+                    errorMsg.style.borderColor = 'rgba(76, 217, 100, 0.2)';
+                }
+            }
+
+            // Helper: Set Loading
+            function setLoading(form, isLoading) {
+                const btn = form.querySelector('.auth-submit-btn');
+                if (btn) {
+                    if (isLoading) {
+                        btn.classList.add('loading');
+                        btn.disabled = true;
+                    } else {
+                        btn.classList.remove('loading');
+                        btn.disabled = false;
+                    }
+                }
+            }
+
+            // Login Submit
+            if (loginForm) {
+                loginForm.addEventListener('submit', async (e) => {
+                    e.preventDefault();
+                    setLoading(loginForm, true);
+                    if (errorMsg) errorMsg.classList.remove('visible');
+
+                    const formData = new FormData(loginForm);
+                    const data = Object.fromEntries(formData.entries());
+
+                    try {
+                        const response = await fetch('/api/auth/login/', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'X-CSRFToken': getCookie('csrftoken')
+                            },
+                            body: JSON.stringify(data)
+                        });
+
+                        const result = await response.json();
+
+                        if (response.ok) {
+                            window.location.href = '/dashboard/';
+                        } else {
+                            showError(result.error || 'Login failed');
+                        }
+                    } catch (err) {
+                        showError('Network error. Please try again.');
+                        console.error(err);
+                    } finally {
+                        setLoading(loginForm, false);
+                    }
+                });
+            }
+
+            // Signup Submit
+            if (signupForm) {
+                signupForm.addEventListener('submit', async (e) => {
+                    e.preventDefault();
+                    setLoading(signupForm, true);
+                    if (errorMsg) errorMsg.classList.remove('visible');
+
+                    const formData = new FormData(signupForm);
+                    const data = Object.fromEntries(formData.entries());
+
+                    if (data.password !== data.confirm_password) {
+                        showError("Passwords do not match");
+                        setLoading(signupForm, false);
+                        return;
+                    }
+
+                    try {
+                        const response = await fetch('/api/auth/register/', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'X-CSRFToken': getCookie('csrftoken')
+                            },
+                            body: JSON.stringify(data)
+                        });
+
+                        const result = await response.json();
+
+                        if (response.ok) {
+                            showSuccess("Account created! Please log in.");
+                            setTimeout(() => {
+                                window.openAuthModal('login'); // Switch to login view
+                            }, 1500);
+                            signupForm.reset();
+                        } else {
+                            showError(result.error || 'Registration failed');
+                        }
+                    } catch (err) {
+                        showError('Network error. Please try again.');
+                        console.error(err);
+                    } finally {
+                        setLoading(signupForm, false);
+                    }
+                });
+            }
+
+            // Forgot Password Submit (Direct Reset)
+            if (forgotForm) {
+                forgotForm.addEventListener('submit', async (e) => {
+                    e.preventDefault();
+                    setLoading(forgotForm, true);
+                    if (errorMsg) errorMsg.classList.remove('visible');
+
+                    const formData = new FormData(forgotForm);
+                    const data = Object.fromEntries(formData.entries());
+
+                    // Validate Passwords
+                    if (data.password !== data.confirm_password) {
+                        showError("Passwords do not match");
+                        setLoading(forgotForm, false);
+                        return;
+                    }
+
+                    try {
+                        // Use the confirm API directly for this "Admin/Local" flow
+                        const response = await fetch('/api/auth/reset-password-confirm/', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'X-CSRFToken': getCookie('csrftoken')
+                            },
+                            body: JSON.stringify(data)
+                        });
+
+                        console.log("Direct Reset Response Status:", response.status);
+
+                        const result = await response.json();
+
+                        if (response.ok) {
+                            showSuccess("Password updated! Please log in.");
+                            setTimeout(() => {
+                                window.openAuthModal('login'); // Switch to login view
+                            }, 1500);
+                            forgotForm.reset();
+                        } else {
+                            showError(result.error || 'Reset failed');
+                        }
+                    } catch (err) {
+                        console.error("Direct Reset Error:", err);
+                        showError('Network error. Check console for details.');
+                    } finally {
+                        setLoading(forgotForm, false);
+                    }
+                });
+            }
+
+            // Django CSRF Token Helper
+            function getCookie(name) {
+                let cookieValue = null;
+                if (document.cookie && document.cookie !== '') {
+                    const cookies = document.cookie.split(';');
+                    for (let i = 0; i < cookies.length; i++) {
+                        const cookie = cookies[i].trim();
+                        if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                            cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                            break;
+                        }
+                    }
+                }
+                return cookieValue;
+            }
+        });
+
+
+
+        // Update functionality to trigger Modal
+        document.addEventListener('DOMContentLoaded', () => {
+            // Attach listeners to all login/signup buttons
+            const authBtns = document.querySelectorAll('[data-auth="login"], [data-auth="signup"]');
+            authBtns.forEach(btn => {
+                btn.onclick = (e) => {
+                    e.preventDefault();
+                    e.stopPropagation(); // Prevent interference
+                    const type = btn.dataset.auth;
+
+                    if (window.openAuthModal) {
+                        window.openAuthModal(type);
+                    } else {
+                        // Should not happen now that code is inlined
+                        console.error("Auth Modal Function Not Found - even after inlining!");
+                        alert("Critical Error: Auth system failed to initialize. Please check console.");
+                    }
+                };
+            });
+
+            // Check Session State on Load (for Dashboard redirect if already logged in)
+            fetch('/api/auth/me/')
+                .then(res => res.json())
+                .then(data => {
+                    if (data.isAuthenticated && !window.location.search.includes('logout=true')) {
+                        window.location.href = "/dashboard/";
+                    }
+                })
+                .catch(console.error);
+
+            // Force scroll to top on load
+            if (history.scrollRestoration) { history.scrollRestoration = 'manual'; }
+            window.scrollTo(0, 0);
+
+            // Preloader
+            setTimeout(() => {
+                const loader = document.getElementById('page-loader');
+                if (loader) {
+                    loader.style.opacity = '0';
+                    setTimeout(() => {
+                        loader.style.visibility = 'hidden';
+                    }, 800);
+                }
+            }, 1000);
+
+            // ... (Rest of animations: Cursor, Typewriter, Scroll, FAQ, RAG)
+
+
+
+            // Cursor Logic
+            const cursorDot = document.getElementById('cursor-dot');
+            const cursorGlow = document.getElementById('cursor-glow');
+
+            document.addEventListener('mousemove', (e) => {
+                const x = e.clientX;
+                const y = e.clientY;
+                cursorDot.style.left = x + 'px';
+                cursorDot.style.top = y + 'px';
+
+                // Delay glow slightly for smooth feel
+                setTimeout(() => {
+                    cursorGlow.style.left = x + 'px';
+                    cursorGlow.style.top = y + 'px';
+                }, 50);
+            });
+
+            // Magnetic Button Effect
+            const magnets = document.querySelectorAll('.magnetic-trigger');
+            magnets.forEach(btn => {
+                btn.addEventListener('mousemove', (e) => {
+                    const rect = btn.getBoundingClientRect();
+                    const x = e.clientX - rect.left - rect.width / 2;
+                    const y = e.clientY - rect.top - rect.height / 2;
+                    btn.style.transform = `translate(${x * 0.2}px, ${y * 0.2}px)`;
+                });
+                btn.addEventListener('mouseleave', () => {
+                    btn.style.transform = 'translate(0px, 0px)';
+                });
+            });
+
+            // 1. Hero Text Reveal
+            const heroTitle = document.getElementById('hero-text');
+            const text = "AI-Powered Knowledge Retrieval<br>from Documents";
+            heroTitle.innerHTML = '';
+
+            // Split by <br> tag to handle line breaks
+            const lines = text.split('<br>');
+            lines.forEach((line, lineIndex) => {
+                line.split('').forEach((char, i) => {
+                    const span = document.createElement('span');
+                    span.innerText = char === ' ' ? '\u00A0' : char;
+                    span.className = 'hero-char';
+                    const totalIndex = lineIndex * 50 + i; // Offset for each line
+                    span.style.transitionDelay = `${totalIndex * 0.03}s`;
+                    heroTitle.appendChild(span);
+                    setTimeout(() => span.classList.add('visible'), 500);
+                });
+                // Add line break after each line except the last
+                if (lineIndex < lines.length - 1) {
+                    heroTitle.appendChild(document.createElement('br'));
+                }
+            });
+
+            // 2. Typewriter Subtitle
+            // 1. Typewriter Effect
+            const subTitle = "Advanced RAG system with semantic search, context-aware retrieval, and intelligent document understanding.";
+            const typeTarget = document.getElementById('typewriter-text');
+            let typeIdx = 0;
+
+            function typeWriter() {
+                if (typeIdx < subTitle.length) {
+                    typeTarget.innerHTML += subTitle.charAt(typeIdx);
+                    typeIdx++;
+                    setTimeout(typeWriter, 35);
+                }
+            }
+            setTimeout(typeWriter, 1500);
+
+            // 2. Scroll Reveal Observer
+            const observer = new IntersectionObserver((entries) => {
+                entries.forEach(entry => {
+                    if (entry.isIntersecting) {
+                        entry.target.classList.add('visible');
+                    }
+                });
+            }, { threshold: 0.1 });
+
+            document.querySelectorAll('.reveal-up, .section-title, .feature-card, .cta-section, .testimonials-grid, .pricing-grid, .faq-grid').forEach(el => observer.observe(el));
+
+            // 3. FAQ Accordion
+            document.querySelectorAll('.faq-header').forEach(header => {
+                header.addEventListener('click', () => {
+                    const card = header.parentElement;
+                    const body = header.nextElementSibling;
+                    const isActive = card.classList.contains('active');
+
+                    document.querySelectorAll('.faq-card').forEach(c => {
+                        c.classList.remove('active');
+                        c.querySelector('.faq-body').style.height = 0;
+                    });
+
+                    if (!isActive) {
+                        card.classList.add('active');
+                        body.style.height = body.scrollHeight + 'px';
+                    }
+                });
+            });
+
+            // 4. RAG Animation Logic
+            const ragVisualizer = document.querySelector('.rag-visualizer');
+            if (ragVisualizer) {
+                const searchInput = ragVisualizer.querySelector('.search-input');
+                const docCluster = ragVisualizer.querySelector('.doc-cluster');
+                const brainContainer = ragVisualizer.querySelector('.rag-brain-container');
+                const outputBox = ragVisualizer.querySelector('.output-box');
+                const dots = ragVisualizer.querySelectorAll('.status-dot');
+                const ragTypeTarget = document.getElementById('rag-type-target');
+                const ragParticles = ragVisualizer.querySelector('.rag-particles');
+
+                function wait(ms) { return new Promise(r => setTimeout(r, ms)); }
+
+                async function runRagSequence() {
+                    // Reset
+                    if (ragTypeTarget) ragTypeTarget.innerText = '';
+                    searchInput.style.width = '0';
+                    searchInput.style.opacity = '0';
+                    docCluster.classList.remove('active');
+                    ragVisualizer.querySelectorAll('.rag-doc').forEach(d => d.classList.remove('highlight'));
+                    brainContainer.classList.remove('active');
+                    outputBox.classList.remove('active');
+                    dots.forEach(d => d.classList.remove('active'));
+
+                    await wait(500);
+
+                    // Step 1: Upload
+                    dots[0].classList.add('active');
+                    docCluster.classList.add('active');
+                    await wait(1500);
+
+                    // Step 2: Vectorize/Search
+                    dots[1].classList.add('active');
+                    searchInput.style.width = '300px';
+                    searchInput.style.opacity = '1';
+                    await wait(500);
+
+                    // Type query
+                    const query = [
+                        "Explain renewable energy benefits",
+                        "What are the key findings in this research?",
+                        "Summarize the API documentation",
+                        "How do I implement authentication?"
+                    ][Math.floor(Math.random() * 4)];
+                    if (ragTypeTarget) {
+                        for (let i = 0; i < query.length; i++) {
+                            ragTypeTarget.innerText += query[i];
+                            await wait(40);  // Natural typing speed
+                        }
+                    }
+                    await wait(500);
+
+                    // Step 3: Retrieve
+                    dots[2].classList.add('active');
+                    const docs = ragVisualizer.querySelectorAll('.rag-doc');
+                    if (docs.length > 1) docs[1].classList.add('highlight'); // Highlight code doc
+
+                    // Create Particles traveling to brain
+                    const brainRect = brainContainer.getBoundingClientRect();
+                    const docRect = docs.length > 1 ? docs[1].getBoundingClientRect() : brainRect;
+                    const containerRect = ragVisualizer.getBoundingClientRect();
+
+                    // Positions relative to container
+                    const startX = docRect.left - containerRect.left + 25;
+                    const startY = docRect.top - containerRect.top + 32;
+                    const endX = containerRect.width / 2;
+                    const endY = (containerRect.height / 2); // approximate brain center
+
+                    for (let k = 0; k < 5; k++) {
+                        let p = document.createElement('div');
+                        p.className = 'particle';
+                        p.style.left = startX + 'px';
+                        p.style.top = startY + 'px';
+                        if (ragParticles) ragParticles.appendChild(p);
+
+                        setTimeout(() => {
+                            p.style.opacity = 1;
+                            p.style.transition = 'all 0.8s cubic-bezier(0.25, 0.46, 0.45, 0.94)';
+                            p.style.left = endX + 'px';
+                            p.style.top = endY + 'px';
+                        }, 50 * k);
+
+                        setTimeout(() => p.remove(), 900);
+                    }
+                    await wait(1000);
+
+                    // Step 4: Generate
+                    dots[3].classList.add('active');
+                    brainContainer.classList.add('active');
+                    await wait(1500);
+                    outputBox.classList.add('active');
+
+                    // Loop
+                    await wait(6000);
+                    runRagSequence();
+                }
+
+                // Start Animation Loop
+                runRagSequence();
+            }
+
+            // Use IntersectionObserver to start animation when in view
+            const ragObserver = new IntersectionObserver((entries) => {
+                if (entries[0].isIntersecting) {
+                    runRagSequence();
+                    ragObserver.disconnect();
+                }
+            });
+            if (ragVisualizer) ragObserver.observe(ragVisualizer);
+
+            function wait(ms) { return new Promise(r => setTimeout(r, ms)); }
+        });
+
+        // 6. Canvas Particle Background
+        const canvas = document.getElementById('bg-canvas');
+        if (canvas) {
+            const ctx = canvas.getContext('2d');
+            let width, height;
+            let particles = [];
+            let animationFrameId;
+
+            class Particle {
+                constructor() {
+                    this.x = Math.random() * width;
+                    this.y = Math.random() * height;
+                    this.vx = (Math.random() - 0.5) * 0.5;
+                    this.vy = (Math.random() - 0.5) * 0.5;
+                    this.size = Math.random() * 2;
+                    this.alpha = Math.random() * 0.5;
+                }
+                update() {
+                    this.x += this.vx;
+                    this.y += this.vy;
+                    if (this.x < 0) this.x = width; if (this.x > width) this.x = 0;
+                    if (this.y < 0) this.y = height; if (this.y > height) this.y = 0;
+                }
+                draw() {
+                    ctx.fillStyle = `rgba(255, 255, 255, ${this.alpha})`;
+                    ctx.beginPath();
+                    ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
+                    ctx.fill();
+                }
+            }
+
+            function initParticles() {
+                particles = [];
+                for (let i = 0; i < 120; i++) particles.push(new Particle());
+            }
+
+            function animate() {
+                ctx.clearRect(0, 0, width, height);
+                particles.forEach(p => {
+                    p.update();
+                    p.draw();
+                    // Connect
+                    particles.forEach(p2 => {
+                        const dx = p.x - p2.x;
+                        const dy = p.y - p2.y;
+                        const dist = Math.sqrt(dx * dx + dy * dy);
+                        if (dist < 120) {
+                            ctx.strokeStyle = `rgba(255, 255, 255, ${0.08 * (1 - dist / 120)})`;
+                            ctx.beginPath();
+                            ctx.moveTo(p.x, p.y);
+                            ctx.lineTo(p2.x, p2.y);
+                            ctx.stroke();
+                        }
+                    });
+                });
+                animationFrameId = requestAnimationFrame(animate);
+            }
+
+            function resize() {
+                width = canvas.width = window.innerWidth;
+                height = canvas.height = window.innerHeight;
+                initParticles();
+            }
+
+            window.addEventListener('resize', resize);
+            resize();
+            animate();
+        }
+    </script>
+</body>
+
+</html>

@@ -1,0 +1,172 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Upload - DocQuery.ai</title>
+    <!-- Fonts -->
+    <link
+        href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;600;700&family=Inter:wght@300;400;500;600&display=swap"
+        rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+
+    <!-- CSS -->
+    <link rel="stylesheet" href="{% static 'ragapp/style.css' %}?v=16">
+    <link rel="stylesheet" href="{% static 'ragapp/dashboard_theme.css' %}?v=4">
+</head>
+
+<body data-theme="light">
+
+    <!-- Navigation -->
+    <nav class="dash-nav">
+        <h2 style="font-family: 'Space Grotesk'; font-weight: 700; color: var(--text-primary);">
+            <i class="fas fa-layer-group" style="color: var(--accent-primary);"></i> DocQuery
+        </h2>
+        </div>
+
+        <div class="nav-links">
+            <a href="{% url 'dashboard' %}" class="nav-item">Documents</a>
+            <a href="{% url 'upload_page' %}" class="nav-item active">Upload</a>
+            <a href="{% url 'history_page' %}" class="nav-item">History</a>
+            <a href="{% url 'favorites_page' %}" class="nav-item">Favorites</a>
+            <div class="db-status" title="Vector DB Status">
+                <span
+                    style="height: 10px; width: 10px; background-color: #10B981; border-radius: 50%; display: inline-block;"></span>
+            </div>
+
+            <!-- Account Dropdown -->
+            <div style="position: relative;">
+                <a href="#" class="nav-item" id="accountTrigger">Account <i class="fas fa-chevron-down"
+                        style="font-size: 0.7em;"></i></a>
+                <div class="account-dropdown" id="accountDropdown">
+                    <a href="#"><i class="far fa-user"></i> Profile Settings</a>
+                    <a href="#"><i class="fas fa-key"></i> Change Password</a>
+                    <div class="divider"></div>
+                    <a href="#" id="logoutBtn"><i class="fas fa-sign-out-alt"></i> Logout</a>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Hero Section -->
+    <section class="hero-section" style="padding: 60px 0;">
+        <div class="hero-content">
+            <h1 class="hero-title">Upload Documents</h1>
+            <p style="color: var(--text-secondary); margin-top: 10px;">Drag and drop PDF files here to process them.</p>
+        </div>
+    </section>
+
+    <!-- Upload Area -->
+    <section class="section-container">
+        <div style="max-width: 800px; margin: 0 auto;">
+            <div id="drop-zone"
+                style="border: 2px dashed var(--border-light); border-radius: 16px; padding: 60px; text-align: center; background: var(--bg-surface); cursor: pointer; transition: all 0.3s;">
+                <i class="fas fa-cloud-upload-alt"
+                    style="font-size: 48px; color: var(--accent-primary); margin-bottom: 20px;"></i>
+                <h3 style="margin-bottom: 10px;">Drag files here or click to browse</h3>
+                <p style="color: var(--text-secondary); font-size: 0.9em;">Supports PDF files only (Max 50MB)</p>
+                <input type="file" id="file-input" multiple accept=".pdf" style="display: none;">
+            </div>
+
+            <!-- Upload Progress -->
+            <div id="upload-status" style="margin-top: 30px; display: none;">
+                <!-- Progress bars will be injected here -->
+            </div>
+        </div>
+    </section>
+
+    <!-- Scripts -->
+    <script src="{% static 'ragapp/main.js' %}?v=20251217"></script>
+    <script>
+        // Reuse dashboard logic for specialized components if needed
+        // ... Account Dropdown logic reuse ...
+
+        // --- Account Dropdown Logic ---
+        const accountTrigger = document.getElementById('accountTrigger');
+        const accountDropdown = document.getElementById('accountDropdown');
+
+        if (accountTrigger && accountDropdown) {
+            accountTrigger.addEventListener('click', (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                accountDropdown.classList.toggle('visible');
+            });
+        }
+
+        document.addEventListener('click', (e) => {
+            if (accountDropdown && !accountDropdown.contains(e.target) && e.target !== accountTrigger) {
+                accountDropdown.classList.remove('visible');
+            }
+        });
+
+        // --- Logout Logic ---
+        document.getElementById('logoutBtn').addEventListener('click', async (e) => {
+            e.preventDefault();
+            await fetch('/api/auth/logout/', { method: 'POST' });
+            window.location.href = '/';
+        });
+
+        // --- Simple Upload Logic for this dedicated page (Quick Hook) ---
+        const dropZone = document.getElementById('drop-zone');
+        const fileInput = document.getElementById('file-input');
+
+        dropZone.addEventListener('click', () => fileInput.click());
+
+        // Simple visual feedback
+        dropZone.addEventListener('dragover', (e) => { e.preventDefault(); dropZone.style.borderColor = 'var(--accent-primary)'; });
+        dropZone.addEventListener('dragleave', (e) => { e.preventDefault(); dropZone.style.borderColor = 'var(--border-light)'; });
+        dropZone.addEventListener('drop', (e) => {
+            e.preventDefault();
+            dropZone.style.borderColor = 'var(--border-light)';
+            // Call main.js handlers if available, or simulate here
+            if (e.dataTransfer.files.length > 0) handleFiles(e.dataTransfer.files);
+        });
+
+        fileInput.addEventListener('change', (e) => {
+            if (fileInput.files.length > 0) handleFiles(fileInput.files);
+        });
+
+        function handleFiles(files) {
+            // Quick visual confirm
+            dropZone.innerHTML = `<i class="fas fa-check-circle" style="font-size: 48px; color: #10B981; margin-bottom: 20px;"></i>
+                              <h3 style="margin-bottom: 10px;">${files.length} File(s) Selected</h3>
+                              <p>Uploading and processing...</p>`;
+
+            // Use the generic app upload logic if accessible, or simple POST
+            if (window.app && window.app.handleFiles) {
+                window.app.handleFiles(files);
+            } else {
+                // Fallback simplistic upload
+                const formData = new FormData();
+                for (let i = 0; i < files.length; i++) formData.append('files', files[i]);
+
+                fetch('/upload/', {
+                    method: 'POST',
+                    body: formData,
+                    headers: { 'X-CSRFToken': getCookie('csrftoken') }
+                }).then(r => window.location.href = "{% url 'dashboard' %}")
+                    .catch(e => alert("Error uploading"));
+            }
+        }
+
+        function getCookie(name) {
+            let cookieValue = null;
+            if (document.cookie && document.cookie !== '') {
+                const cookies = document.cookie.split(';');
+                for (let i = 0; i < cookies.length; i++) {
+                    const cookie = cookies[i].trim();
+                    if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                        cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                        break;
+                    }
+                }
+            }
+            return cookieValue;
+        }
+
+    </script>
+</body>
+
+</html>

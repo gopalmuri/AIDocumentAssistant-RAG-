@@ -1,0 +1,719 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chat - AI Document Assistant</title>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;600;700&family=Inter:wght@300;400;500;600&display=swap"
+        rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="{% static 'ragapp/style.css' %}?v=55">
+    <link rel="stylesheet" href="{% static 'ragapp/dashboard_theme.css' %}?v=5">
+    <script>
+        // Init Theme Immediately to prevent flash
+        (function () {
+            const savedTheme = localStorage.getItem('theme') || 'light';
+            document.documentElement.setAttribute('data-theme', savedTheme);
+        })();
+    </script>
+    <style>
+        /* Chat Page Specific Styles */
+        body {
+            background-color: var(--bg-app);
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            /* Prevent body scroll, handle in chat container */
+        }
+
+        .chat-page-container {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            height: calc(100vh - 70px);
+            /* Adjust for Navbar */
+            max-width: 900px;
+            margin: 0 auto;
+            width: 100%;
+            position: relative;
+        }
+
+        /* Message Area */
+        .chat-history {
+            flex: 1;
+            overflow-y: auto;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+            scroll-behavior: smooth;
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+            position: relative;
+        }
+
+        .chat-history::-webkit-scrollbar {
+            display: none;
+        }
+
+        /* Message Bubbles */
+        .message-row {
+            display: flex;
+            width: 100%;
+            flex-direction: row;
+        }
+
+        .message-row.user {
+            justify-content: flex-end !important;
+        }
+
+        .message-row.ai {
+            justify-content: flex-start !important;
+        }
+
+        .message-bubble {
+            max-width: 80%;
+            width: fit-content;
+            padding: 14px 20px;
+            position: relative;
+            line-height: 1.6;
+            font-size: 0.95rem;
+            box-shadow: var(--shadow-card);
+            animation: fadeIn 0.3s ease;
+            word-wrap: break-word;
+            text-align: left;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(5px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .message-bubble.ai {
+            background: var(--bg-surface);
+            color: var(--text-primary);
+            border-radius: 12px 12px 12px 2px;
+            border: 1px solid var(--border-light);
+            margin-right: auto;
+        }
+
+        .message-bubble.user {
+            background: var(--bg-hero);
+            /* Matches theme pink/dark */
+            color: var(--text-primary);
+            border-radius: 12px 12px 2px 12px;
+            border: 1px solid var(--border-light);
+            margin-left: auto;
+        }
+
+        /* Input Area: Static, No Absolute Positioning */
+        .chat-input-area {
+            flex-shrink: 0;
+            width: 100%;
+            padding: 20px 0;
+            background-color: var(--bg-app);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            z-index: 100;
+        }
+
+        .input-wrapper {
+            width: 100%;
+            background: var(--input-bg);
+            border-radius: 28px;
+            box-shadow: var(--shadow-card);
+            border: 1px solid var(--border-light);
+            display: flex;
+            align-items: center;
+            padding: 8px 8px 8px 6px;
+            /* Reduced Left Padding */
+            transition: all 0.3s ease;
+            position: relative;
+        }
+
+        .input-wrapper:focus-within {
+            border-color: var(--accent-primary);
+            box-shadow: 0 4px 16px rgba(255, 105, 180, 0.1);
+        }
+
+        .chat-input {
+            flex: 1;
+            border: none;
+            outline: none;
+            padding: 10px 14px;
+            font-family: 'Inter', sans-serif;
+            font-size: 0.95rem;
+            resize: none;
+            max-height: 120px;
+            overflow-y: auto;
+            background: transparent;
+        }
+
+        .action-btn {
+            background: none;
+            border: none;
+            color: var(--text-muted);
+            cursor: pointer;
+            padding: 10px;
+            border-radius: 50%;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .action-btn:hover {
+            background: var(--bg-surface-hover);
+            color: var(--accent-primary);
+        }
+
+        .send-btn {
+            background: var(--accent-primary);
+            color: white;
+            border: none;
+            width: 42px;
+            height: 42px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            margin-left: 8px;
+            transition: all 0.2s;
+            box-shadow: 0 2px 10px rgba(255, 105, 180, 0.3);
+        }
+
+        .send-btn:hover {
+            transform: scale(1.05);
+            box-shadow: 0 4px 15px rgba(255, 105, 180, 0.4);
+        }
+
+        /* Message Formatting */
+        .message-bubble strong {
+            font-weight: 600;
+            color: #333;
+        }
+
+        .message-bubble ul {
+            padding-left: 20px;
+            margin: 8px 0;
+        }
+
+        .message-bubble li {
+            margin-bottom: 4px;
+        }
+
+        /* Empty State Layout - Minimal Professional */
+        .empty-state {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            width: 100%;
+            max-width: 800px;
+        }
+
+        .welcome-container {
+            margin-bottom: 24px;
+            /* Tighter gap */
+            animation: fadeInUp 0.5s ease-out;
+        }
+
+        .ai-avatar-large {
+            width: 56px;
+            height: 56px;
+            /* Compact */
+            background: var(--bg-surface);
+            border-radius: 16px;
+            /* Soft square */
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 16px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.04);
+            color: var(--accent-primary);
+            font-size: 24px;
+            border: 1px solid var(--border-light);
+        }
+
+        .welcome-container h1 {
+            font-family: 'Space Grotesk', sans-serif;
+            font-size: 1.6rem;
+            /* Clear, not huge */
+            color: var(--text-primary);
+            font-weight: 700;
+            margin-bottom: 8px;
+        }
+
+        .welcome-container .subtitle {
+            font-size: 0.95rem;
+            color: var(--text-secondary);
+            max-width: 500px;
+            margin: 0 auto;
+            line-height: 1.5;
+        }
+
+        .suggestions-container {
+            width: 100%;
+            max-width: 800px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 12px;
+            animation: fadeInUp 0.6s ease-out;
+        }
+
+        /* Suggestion Grid -> Horizontal Row */
+        .suggestions-grid {
+            display: flex;
+            flex-direction: row;
+            justify-content: center;
+            gap: 12px;
+            width: 100%;
+            flex-wrap: wrap;
+        }
+
+        .suggestion-card {
+            background: var(--bg-surface);
+            border: 1px solid var(--border-light);
+            border-radius: 20px;
+            /* Pill shape for text only */
+            padding: 8px 20px;
+            display: flex;
+            align-items: center;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            color: var(--text-primary);
+        }
+
+        .suggestion-card:hover {
+            transform: translateY(-2px);
+            background: var(--bg-surface-hover);
+            border-color: var(--accent-primary);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        }
+
+
+
+        /* Removed suggestion-card-icon styles */
+
+        .suggestion-card span {
+            font-weight: 500;
+            color: var(--text-primary);
+            font-size: 0.9rem;
+            line-height: 1.4;
+            white-space: normal;
+            /* Allow text to wrap if needed, or keep nowrap */
+        }
+
+        .suggestion-card:hover span {
+            color: var(--accent-primary);
+        }
+
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        @media (max-width: 768px) {
+            .suggestions-grid {
+                flex-direction: column;
+                align-items: center;
+            }
+
+            .suggestion-card {
+                width: 100%;
+                justify-content: center;
+            }
+        }
+    </style>
+    <style>
+        /* Force Input Alignment Overrides */
+        #chatPageInput {
+            text-align: left !important;
+            flex-grow: 1 !important;
+            width: auto !important;
+            margin: 0 12px !important;
+            padding: 10px 0 !important;
+        }
+
+        #chatPageInput::placeholder {
+            text-align: left !important;
+        }
+
+        .input-wrapper {
+            justify-content: flex-start !important;
+            gap: 0 !important;
+        }
+
+        #attachBtn {
+            margin-right: 0 !important;
+        }
+
+        #chatPageSend {
+            margin-left: 0 !important;
+        }
+
+        /* Ported Styles from PDF Viewer for Structured Chat */
+        .ai-section {
+            margin-bottom: 12px;
+            border: 1px solid #E5E7EB;
+            border-radius: 8px;
+            overflow: hidden;
+            background: white;
+        }
+
+        .ai-section summary {
+            padding: 12px 16px;
+            cursor: pointer;
+            font-weight: 600;
+            background: #F9FAFB;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            outline: none;
+            user-select: none;
+            color: #374151;
+            font-size: 0.9rem;
+        }
+
+        .ai-section summary::after {
+            content: '\f078';
+            font-family: 'Font Awesome 6 Free';
+            font-weight: 900;
+            transition: transform 0.2s;
+            font-size: 0.8rem;
+            color: #9CA3AF;
+        }
+
+        .ai-section[open] summary::after {
+            transform: rotate(180deg);
+        }
+
+        .section-content {
+            padding: 16px;
+            border-top: 1px solid #E5E7EB;
+            font-size: 0.95rem;
+            line-height: 1.6;
+            color: #1F2937;
+        }
+
+        .ai-section.main-answer {
+            border-color: #FECDD3;
+        }
+
+        .ai-section.main-answer summary {
+            background: #fffafa;
+            color: #111827;
+        }
+
+        .ai-section.main-answer .section-content {
+            background: #fff;
+        }
+
+        /* Action Bar */
+        .message-actions-bar {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            margin-top: 12px;
+            padding-top: 12px;
+            border-top: 1px dashed #E5E7EB;
+            justify-content: space-between;
+        }
+
+        .action-group {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+        .action-btn-chat {
+            background: transparent;
+            border: none;
+            cursor: pointer;
+            padding: 6px;
+            border-radius: 4px;
+            color: #6B7280;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .action-btn-chat:hover {
+            color: #1F2937;
+            background: #F3F4F6;
+        }
+
+        .action-btn-chat.active {
+            color: #FB7185;
+        }
+
+        .action-btn-chat i {
+            font-size: 1rem;
+        }
+
+        /* Detailed Sources */
+        .detailed-sources {
+            margin-top: 16px;
+            border: 1px dashed #E5E7EB;
+            border-radius: 8px;
+            padding: 12px;
+            background: #FAFAF9;
+        }
+
+        .sources-header {
+            font-size: 0.8rem;
+            font-weight: 600;
+            color: #6B7280;
+            margin-bottom: 8px;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .source-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            gap: 8px;
+        }
+
+        .source-card {
+            background: white;
+            border: 1px solid #E5E7EB;
+            border-radius: 6px;
+            padding: 10px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .source-card:hover {
+            border-color: #FB7185;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+        }
+
+        .source-title {
+            font-size: 0.85rem;
+            font-weight: 500;
+            color: #374151;
+            margin-bottom: 6px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .source-meta {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+        }
+
+        .score-badge {
+            font-size: 0.7rem;
+            padding: 2px 6px;
+            border-radius: 4px;
+            background: #F3F4F6;
+            color: #4B5563;
+            border: 1px solid #E5E7EB;
+        }
+
+        .score-badge span {
+            font-weight: 600;
+            color: #111827;
+        }
+
+        /* Follow-ups */
+        .suggestions-container-chat {
+            margin-top: 16px;
+            padding-top: 12px;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+
+        .suggestion-chip {
+            padding: 6px 12px;
+            background: white;
+            border: 1px solid #E5E7EB;
+            border-radius: 16px;
+            font-size: 0.85rem;
+            color: #374151;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .suggestion-chip:hover {
+            border-color: #FB7185;
+            color: #FB7185;
+            background: #FFF1F2;
+        }
+    </style>
+</head>
+
+<body data-theme="light">
+
+    <!-- Navigation -->
+    {% include "ragapp/components/navbar.html" %}
+
+    <div class="chat-page-container">
+
+        <!-- Chat History -->
+        <div class="chat-history" id="chatMessages">
+            <!-- Empty State / Welcome Screen -->
+            <div class="empty-state">
+                <div class="welcome-container">
+                    <div class="ai-avatar-large">
+                        <i class="fas fa-layer-group"></i>
+                    </div>
+                    <h1>AI-Powered Knowledge Retrieval Assistant</h1>
+                    <p class="subtitle">I can help you analyze documents, extract insights, and answer questions. Upload
+                        a PDF to get started.</p>
+                </div>
+
+                <div class="suggestions-container">
+                    <div class="suggestions-grid">
+                        <button class="suggestion-card" onclick="app.useSuggestion('Summarize my documents')">
+                            <span>Summarize my documents</span>
+                        </button>
+                        <button class="suggestion-card" onclick="app.useSuggestion('What are the key findings?')">
+                            <span>What are the key findings?</span>
+                        </button>
+                        <button class="suggestion-card" onclick="app.useSuggestion('Explain the last PDF')">
+                            <span>Explain the last PDF</span>
+                        </button>
+                        <button class="suggestion-card" onclick="app.useSuggestion('List action items')">
+                            <span>List action items</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Input Area (Fixed Center Bottom) -->
+        <div class="chat-input-area">
+
+
+
+            <!-- Upload Progress (Absolute Overlay or above input if needed) -->
+            <div id="chatUploadProgress"
+                style="display:none; width:100%; margin-bottom: 10px; background: rgba(255,255,255,0.9); padding: 8px; border-radius: 8px; text-align: center; border: 1px solid var(--border-light);">
+                <div class="spinner"
+                    style="display:inline-block; width:14px; height:14px; margin-right: 8px; vertical-align: middle;">
+                </div>
+                <span style="font-size:0.85rem; color:var(--text-secondary);">Processing...</span>
+            </div>
+
+            <!-- New Chat Button (Floating Left Above Input) -->
+            <div style="width: 100%; display: flex; justify-content: flex-start; padding-bottom: 8px;">
+                <button id="newChatFullBtn" class="new-chat-pill"
+                    style="margin-left: 12px; border-radius: 12px; padding: 6px 12px; font-size: 0.85rem; background: var(--bg-surface); border: 1px solid var(--border-light); box-shadow: var(--shadow-sm);">
+                    <i class="fas fa-plus"></i> New Chat
+                </button>
+                <button id="favoriteChatBtn" onclick="app.toggleChatFavorite()" class="new-chat-pill"
+                    style="margin-left: 8px; border-radius: 12px; padding: 6px 12px; font-size: 0.85rem; background: var(--bg-surface); border: 1px solid var(--border-light); box-shadow: var(--shadow-sm); cursor: pointer;"
+                    title="Add to Favorites">
+                    <i class="far fa-heart"></i>
+                </button>
+            </div>
+
+            <div class="input-wrapper"
+                style="display: flex !important; flex-direction: row !important; align-items: center !important; justify-content: flex-start !important; width: 100% !important; padding: 6px 6px 6px 6px !important; gap: 0 !important; box-sizing: border-box !important;">
+
+                <button class="action-btn" id="attachBtn" title="Upload PDF"
+                    style="margin: 0 12px 0 0 !important; padding: 10px !important; flex: 0 0 auto !important; width: auto !important; height: auto !important; order: 1 !important; position: static !important; inset: auto !important; background: transparent !important;">
+                    <i class="fas fa-paperclip"></i>
+                </button>
+
+                <!-- Hidden file input -->
+                <input type="file" id="chatFileInput" multiple accept=".pdf" style="display: none;">
+
+                <textarea id="chatPageInput" class="chat-input" placeholder="Ask a question or drag & drop files..."
+                    rows="1"
+                    style="flex: 1 1 auto !important; width: 100% !important; min-width: 0 !important; text-align: left !important; margin: 0 !important; padding: 10px 0 !important; order: 2 !important; resize: none !important;"></textarea>
+
+                <!-- Mic Button (Default when empty) -->
+                <button class="send-btn mic-btn" id="micBtn" title="Voice Input"
+                    style="margin: 0 0 0 12px !important; padding: 0 !important; width: 42px !important; height: 42px !important; flex: 0 0 auto !important; order: 3 !important; border-radius: 50% !important; background: var(--bg-surface); color: var(--text-secondary); border: 1px solid var(--border-light); display: flex;">
+                    <i class="fas fa-microphone"></i>
+                </button>
+
+                <!-- Send Button (Hidden by default or toggled) -->
+                <button class="send-btn" id="chatPageSend"
+                    style="margin: 0 0 0 12px !important; padding: 0 !important; width: 42px !important; height: 42px !important; flex: 0 0 auto !important; order: 3 !important; border-radius: 50% !important; display: none;">
+                    <i class="fas fa-paper-plane"></i>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script src="{% static 'ragapp/main.js' %}?v=force_refresh_33"></script>
+    <script>
+        // Initialize Chat Page Logic
+        // Initialize Chat Page Logic
+        document.addEventListener('DOMContentLoaded', () => {
+            // Check for History navigation (Handled in main.js now)
+            // const historyId = localStorage.getItem('current_conversation_id'); ... removed
+
+            // Check for URL params (redirected from dashboard)
+            const urlParams = new URLSearchParams(window.location.search);
+            const initialQuery = urlParams.get('q');
+            const uploadSuccess = urlParams.get('upload_success');
+            const cid = urlParams.get('cid'); // Also support URL param for direct links
+
+            if (cid) {
+                setTimeout(() => {
+                    if (app && app.loadConversation) {
+                        app.loadConversation(cid);
+                    }
+                }, 100);
+            }
+
+            if (uploadSuccess) {
+                app.addChatMessage('ai', "I've successfully processed your new document! What would you like to know about it?");
+            }
+
+            if (initialQuery) {
+                // Simulate user typing and sending
+                setTimeout(() => {
+                    app.handleChatPageSearch(initialQuery);
+                    // Clear URL params to prevent re-asking on refresh
+                    window.history.replaceState({}, document.title, window.location.pathname);
+                }, 500);
+            }
+        });
+
+        // Override Removed: Now using unified logic from main.js
+    </script>
+</body>
+
+</html>
