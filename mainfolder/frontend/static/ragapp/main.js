@@ -17,7 +17,6 @@ class DocumentAssistant {
     this.attachEventListeners();
     if (window.pdfContext) this.currentPDF = window.pdfContext; // Capture context
     this.loadPDFLibrary();
-    this.loadPDFLibrary();
     this.startStatusPolling();
     this.restoreActiveSession(); // New persistence logic
   }
