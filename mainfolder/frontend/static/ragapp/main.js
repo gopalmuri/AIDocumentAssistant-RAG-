@@ -26,21 +26,32 @@ class DocumentAssistant {
       // Only restore if we are on the Chat Page (have chatMessages container)
       if (!this.chatMessages) return;
 
-      // Prioritize Global ID if on Chat Page (no PDF context)
-      let savedId = localStorage.getItem('current_conversation_id');
-      if (!window.pdfContext) {
-          savedId = localStorage.getItem('global_conversation_id') || savedId;
+      // Check current page context
+      let savedId;
+      if (window.pdfContext) {
+           // PDF viewer has its own scope
+           // We might want to persist the chat for this document?
+           // For now, let's assume valid session if user just refreshed
+           savedId = localStorage.getItem('current_conversation_id'); 
+      } else {
+           // On Global Chat Page (no PDF)
+           // Use the "Global" ID if available to persist the main chat
+           savedId = localStorage.getItem('global_conversation_id');
       }
       
       if (savedId) {
-          console.log('Attempting to restore session:', savedId);
+          console.log('[PERSIST] Restoring conversation:', savedId);
+          this.conversationId = savedId; // Set immediately
           try {
-              // Reuse openConversation logic which fetches and renders
-              await this.openConversation(savedId);
+              // Fetch history for this ID
+              await this.loadConversationHistory(savedId); 
+              // openConversation might trigger UI shifts we don't want, so we use loadConversationHistory directly
           } catch (e) {
-              console.warn('Failed to restore session, clearing:', e);
-              localStorage.removeItem('current_conversation_id');
-              this.startNewChat(true); // Reset UI without confirm
+              console.warn('[PERSIST] Failed to restore session, starting new:', e);
+              localStorage.removeItem(window.pdfContext ? 'current_conversation_id' : 'global_conversation_id');
+              // Don't necessarily start new chat immediately if we want to show empty state, 
+              // but setting conversationId = null happens automatically if we don't set it.
+              this.conversationId = null; 
           }
       }
   }
